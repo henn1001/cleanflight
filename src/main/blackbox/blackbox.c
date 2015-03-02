@@ -1140,6 +1140,10 @@ void blackboxLogEvent(FlightLogEvent event, flightLogEventData_t *data)
                 blackboxWrite(data->inflightAdjustment.adjustmentFunction);
                 blackboxWriteSignedVB(data->inflightAdjustment.newValue);
             }
+        case FLIGHT_LOG_EVENT_GTUNE_RESULT:
+            blackboxWrite(data->gtuneCycleResult.gtuneAxis);
+            blackboxWrite(data->gtuneCycleResult.gtuneGyroAVG);
+            blackboxWrite(data->gtuneCycleResult.gtuneNewP);
         break;
         case FLIGHT_LOG_EVENT_LOG_END:
             blackboxPrint("End of log");
