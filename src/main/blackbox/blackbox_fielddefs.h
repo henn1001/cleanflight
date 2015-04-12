@@ -150,8 +150,8 @@ typedef struct flightLogEvent_inflightAdjustment_t {
 
 typedef struct flightLogEvent_gtuneCycleResult_t {
     uint8_t gtuneAxis;
-    uint32_t gtuneGyroAVG;
-    uint8_t gtuneNewP;
+    int32_t gtuneGyroAVG;
+    int16_t gtuneNewP;
 } flightLogEvent_gtuneCycleResult_t;
 
 typedef union flightLogEventData_t
