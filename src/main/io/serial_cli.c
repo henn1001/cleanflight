@@ -448,6 +448,7 @@ const clivalue_t valueTable[] = {
     { "d_vel",                      VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.D8[PIDVEL], 0, 200 },
 
     { "yaw_p_limit",                VAR_UINT16 | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.yaw_p_limit, YAW_P_LIMIT_MIN, YAW_P_LIMIT_MAX },
+	{ "dterm_cut_hz",               VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.dterm_cut_hz, 0, 50 },
 
 #ifdef BLACKBOX
     { "blackbox_rate_num",          VAR_UINT8  | MASTER_VALUE,  &masterConfig.blackbox_rate_num, 1, 32 },
@@ -1363,13 +1364,14 @@ static void cliMotor(char *cmdline)
     int motor_value = 0;
     int index = 0;
     char *pch = NULL;
+    char *saveptr;
 
     if (isEmpty(cmdline)) {
         cliPrint("Usage:\r\nmotor index [value] - show [or set] motor value\r\n");
         return;
     }
 
-    pch = strtok(cmdline, " ");
+    pch = strtok_r(cmdline, " ", &saveptr);
     while (pch != NULL) {
         switch (index) {
             case 0:
@@ -1380,7 +1382,7 @@ static void cliMotor(char *cmdline)
                 break;
         }
         index++;
-        pch = strtok(NULL, " ");
+        pch = strtok_r(NULL, " ", &saveptr);
     }
 
     if (motor_index < 0 || motor_index >= MAX_SUPPORTED_MOTORS) {
