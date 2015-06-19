@@ -30,6 +30,8 @@
 #define BEEP_GPIO GPIOA
 #define BEEP_PIN Pin_15 // PA15 (Beeper)
 #define BEEP_PERIPHERAL RCC_APB2Periph_GPIOA
+#define BEEPER_INVERTED
+
 
 #define MPU6000_CS_GPIO       GPIOA
 #define MPU6000_CS_PIN        GPIO_Pin_4
