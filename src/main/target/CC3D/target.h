@@ -28,7 +28,7 @@
 #define INVERTER_USART USART1
 
 #define BEEP_GPIO GPIOA
-#define BEEP_PIN Pin_15 // PA15 (Beeper)
+#define BEEP_PIN Pin_2 // PA15 (Beeper)
 #define BEEP_PERIPHERAL RCC_APB2Periph_GPIOA
 #define BEEPER_INVERTED
 
