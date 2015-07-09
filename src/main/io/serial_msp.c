@@ -342,6 +342,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXSERVO2, "SERVO2;", 24 },
     { BOXSERVO3, "SERVO3;", 25 },
     
+    { BOXBLACKBOX, "BLACKBOX;", 26 },
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -680,6 +681,7 @@ void mspInit(serialConfig_t *serialConfig)
         activeBoxIds[activeBoxIdCount++] = BOXSONAR;
     }
 
+
 #ifdef USE_SERVOS
     if (masterConfig.mixerMode == MIXER_CUSTOM_AIRPLANE) {
         activeBoxIds[activeBoxIdCount++] = BOXSERVO1;
@@ -687,6 +689,10 @@ void mspInit(serialConfig_t *serialConfig)
         activeBoxIds[activeBoxIdCount++] = BOXSERVO3;
     }
 #endif
+
+    if (feature(FEATURE_BLACKBOX)){
+        activeBoxIds[activeBoxIdCount++] = BOXBLACKBOX;
+    }
 
     memset(mspPorts, 0x00, sizeof(mspPorts));
     mspAllocateSerialPorts(serialConfig);
@@ -808,7 +814,8 @@ static bool processOutCommand(uint8_t cmdMSP)
             IS_ENABLED(IS_RC_MODE_ACTIVE(BOXTELEMETRY)) << BOXTELEMETRY |
             IS_ENABLED(IS_RC_MODE_ACTIVE(BOXAUTOTUNE)) << BOXAUTOTUNE |
             IS_ENABLED(FLIGHT_MODE(SONAR_MODE)) << BOXSONAR |
-            IS_ENABLED(ARMING_FLAG(ARMED)) << BOXARM;
+            IS_ENABLED(ARMING_FLAG(ARMED)) << BOXARM |
+            IS_ENABLED(IS_RC_MODE_ACTIVE(BOXBLACKBOX)) << BOXBLACKBOX;
         for (i = 0; i < activeBoxIdCount; i++) {
             int flag = (tmp & (1 << activeBoxIds[i]));
             if (flag)

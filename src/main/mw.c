@@ -357,7 +357,9 @@ void mwArm(void)
                 if (sharedBlackboxAndMspPort) {
                     mspReleasePortIfAllocated(sharedBlackboxAndMspPort);
                 }
-                startBlackbox();
+                if (IS_RC_MODE_ACTIVE(BOXBLACKBOX)) {
+                    startBlackbox();
+                }
             }
 #endif
             disarmAt = millis() + masterConfig.auto_disarm_delay * 1000;   // start disarm timeout, will be extended when throttle is nonzero
