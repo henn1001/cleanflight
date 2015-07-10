@@ -597,6 +597,7 @@ LDFLAGS		 = -lm \
 		   -static \
 		   -Wl,-gc-sections,-Map,$(TARGET_MAP) \
 		   -Wl,-L$(LINKER_DIR) \
+           -Wl,--cref \
 		   -T$(LD_SCRIPT)
 
 ###############################################################################
