@@ -5,6 +5,8 @@
  *      Author: borisb
  */
 
+#define RC_SMOOTH_HZ 12
+
 typedef struct filterStatePt1_s {
 	float state;
 	float RC;

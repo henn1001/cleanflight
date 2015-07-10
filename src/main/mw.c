@@ -688,6 +688,37 @@ void processRx(void)
 
 }
 
+// Gyro Low Pass
+void filterGyro(void) {
+    int axis;
+    static filterStatePt1_t gyroADCState[XYZ_AXIS_COUNT];
+
+    for (axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+    	if (masterConfig.looptime > 0) {
+    		// Static dT calculation based on configured looptime
+            if (!gyroADCState[axis].constdT) {
+                gyroADCState[axis].constdT = (float)masterConfig.looptime * 0.000001f;
+            }
+
+            gyroADC[axis] = filterApplyPt1(gyroADC[axis], &gyroADCState[axis], currentProfile->pidProfile.gyro_cut_hz, gyroADCState[axis].constdT);
+    	}
+
+        else {
+	        gyroADC[axis] = filterApplyPt1(gyroADC[axis], &gyroADCState[axis], currentProfile->pidProfile.gyro_cut_hz, dT);
+        }
+    }
+}
+
+// RC low pass
+void filterRc(void){
+    int chan;
+    static filterStatePt1_t rcSmoothingState[3];
+
+    for (chan = 0; chan < 3; chan++) {
+        rcCommand[chan] = filterApplyPt1(rcCommand[chan], &rcSmoothingState[chan], RC_SMOOTH_HZ, dT);
+    }
+}
+
 void loop(void)
 {
     static uint32_t loopTime;
@@ -747,23 +778,7 @@ void loop(void)
 
         // Gyro Low Pass
         if (currentProfile->pidProfile.gyro_cut_hz) {
-            int axis;
-            static filterStatePt1_t gyroADCState[XYZ_AXIS_COUNT];
-
-            for (axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-            	if (masterConfig.looptime > 0) {
-            		// Static dT calculation based on configured looptime
-                    if (!gyroADCState[axis].constdT) {
-                        gyroADCState[axis].constdT = (float)masterConfig.looptime * 0.000001f;
-                    }
-
-                    gyroADC[axis] = filterApplyPt1(gyroADC[axis], &gyroADCState[axis], currentProfile->pidProfile.gyro_cut_hz, gyroADCState[axis].constdT);
-            	}
-
-                else {
-        	        gyroADC[axis] = filterApplyPt1(gyroADC[axis], &gyroADCState[axis], currentProfile->pidProfile.gyro_cut_hz, dT);
-                }
-            }
+            filterGyro();
         }
 
         annexCode();
@@ -815,6 +830,9 @@ void loop(void)
             }
         }
 #endif
+        if (masterConfig.rxConfig.rc_smoothing) {
+            filterRc();
+        }
 
         // PID - note this is function pointer set by setPIDController()
         pid_controller(
