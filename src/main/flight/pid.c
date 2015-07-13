@@ -225,12 +225,22 @@ static void pidLuxFloat(pidProfile_t *pidProfile, controlRateConfig_t *controlRa
         DTerm = constrainf((deltaSum / 3.0f) * pidProfile->D_f[axis] * PIDweight[axis] / 100, -300.0f, 300.0f);
 
         // -----calculate total PID output
-        axisPID[axis] = constrain(lrintf(PTerm + ITerm + DTerm), -1000, 1000);
+        if (pidProfile->old_delta) {
+        	axisPID[axis] = constrain(lrintf(PTerm + ITerm - DTerm), -1000, 1000);
+        }
+        else {
+            axisPID[axis] = constrain(lrintf(PTerm + ITerm + DTerm), -1000, 1000);
+        }
 
 #ifdef BLACKBOX
         axisPID_P[axis] = PTerm;
         axisPID_I[axis] = ITerm;
-        axisPID_D[axis] = DTerm;
+        if (pidProfile->old_delta) {
+            axisPID_D[axis] = -DTerm;
+        }
+        else {
+            axisPID_D[axis] = DTerm;
+        }
 #endif
     }
 }
