@@ -110,7 +110,7 @@ static void pidLuxFloat(pidProfile_t *pidProfile, controlRateConfig_t *controlRa
     float RateError, errorAngle, AngleRate, gyroRate;
     float ITerm,PTerm,DTerm;
     int32_t stickPosAil, stickPosEle, mostDeflectedPos;
-    static float lastError[3];
+    static float lastError[3],lastGyroRate[3];
     static float delta1[3], delta2[3];
     float delta, deltaSum;
     int axis;
@@ -199,8 +199,15 @@ static void pidLuxFloat(pidProfile_t *pidProfile, controlRateConfig_t *controlRa
         ITerm = errorGyroIf[axis];
 
         //-----calculate D-term
-        delta = RateError - lastError[axis];
-        lastError[axis] = RateError;
+        // Delta 2 approaches for testing/comparing purposes
+        if (pidProfile->old_delta) {
+            delta = gyroRate - lastGyroRate[axis];
+            lastGyroRate[axis] = gyroRate;
+        }
+        else {
+            delta = RateError - lastError[axis];
+            lastError[axis] = RateError;
+        }
 
         // Correct difference by cycle time. Cycle time is jittery (can be different 2 times), so calculated difference
         // would be scaled by different dt each time. Division by dT fixes that.
