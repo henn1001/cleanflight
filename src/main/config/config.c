@@ -409,7 +409,6 @@ static void resetConf(void)
     masterConfig.rxConfig.rssi_ppm_invert = 0;
 
     masterConfig.inputFilteringMode = INPUT_FILTERING_DISABLED;
-    masterConfig.rxConfig.rc_smoothing = 0;
 
     masterConfig.retarded_arm = 0;
     masterConfig.disarm_kill_switch = 1;

@@ -105,6 +105,8 @@ static uint32_t disarmAt;     // Time of automatic disarm when "Don't spin the m
 
 extern uint8_t dynP8[3], dynI8[3], dynD8[3], PIDweight[3];
 
+static bool isRXdataNew;
+
 typedef void (*pidControllerFuncPtr)(pidProfile_t *pidProfile, controlRateConfig_t *controlRateConfig,
         uint16_t max_angle_inclination, rollAndPitchTrims_t *angleTrim, rxConfig_t *rxConfig);            // pid controller function prototype
 
@@ -709,14 +711,42 @@ void filterGyro(void) {
     }
 }
 
-// RC low pass
+// RC Filter
 void filterRc(void){
-    int chan;
-    static filterStatePt1_t rcSmoothingState[3];
+	int channel;
+    static int16_t lastcommand[4] = { 0, 0, 0, 0 };
+    static int16_t deltaRC[4] = { 0, 0, 0, 0 };
+    static int16_t factor, maxfactor;
 
-    for (chan = 0; chan < 3; chan++) {
-        rcCommand[chan] = filterApplyPt1(rcCommand[chan], &rcSmoothingState[chan], RC_SMOOTH_HZ, dT);
+    if (!maxfactor) {
+    	if (masterConfig.looptime) {
+            maxfactor = (40000 / masterConfig.looptime + 1) / 2;
+    	}
+        else {
+            maxfactor = (40000 / cycleTime + 1) / 2;
+         }
+
     }
+
+	if (isRXdataNew) {
+    	for (channel=0; channel < 4; channel++) {
+    		 deltaRC[channel] = rcData[channel] - lastcommand[channel];
+    		 lastcommand[channel] = rcData[channel];
+    	}
+        isRXdataNew = false;
+        factor = maxfactor - 1;
+    } else {
+        factor--;
+    }
+
+    // Interpolate steps of rcdata
+    if (factor > 0) {
+    	for (channel=0; channel < 4; channel++) {
+            rcData[channel] = lastcommand[channel] - deltaRC[channel] * factor/maxfactor;
+    	}
+    } else {
+        factor = 0;
+	}
 }
 
 void loop(void)
@@ -730,6 +760,7 @@ void loop(void)
 
     if (shouldProcessRx(currentTime)) {
         processRx();
+        isRXdataNew = true;
 
 #ifdef BARO
         // the 'annexCode' initialses rcCommand, updateAltHoldState depends on valid rcCommand data.
@@ -781,6 +812,8 @@ void loop(void)
             filterGyro();
         }
 
+        filterRc();
+
         annexCode();
 #if defined(BARO) || defined(SONAR)
         haveProcessedAnnexCodeOnce = true;
@@ -830,9 +863,6 @@ void loop(void)
             }
         }
 #endif
-        if (masterConfig.rxConfig.rc_smoothing) {
-            filterRc();
-        }
 
         // PID - note this is function pointer set by setPIDController()
         pid_controller(
