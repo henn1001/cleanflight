@@ -66,6 +66,7 @@ typedef struct pidProfile_s {
     uint8_t pterm_cut_hz;                   // Used for fitlering Pterm noise on noisy frames
     uint8_t gyro_cut_hz;                    // Used for soft gyro filtering
     uint8_t old_delta;                      // For testing purpose only. Old delta = from gyroRate, New delta= From RateError
+    uint8_t rc_factor;                      // For testing purpose for RC filter
 } pidProfile_t;
 
 #define DEGREES_TO_DECIDEGREES(angle) (angle * 10)

@@ -175,6 +175,7 @@ static void resetPidProfile(pidProfile_t *pidProfile)
     pidProfile->pterm_cut_hz = 0;
     pidProfile->dterm_cut_hz = 0;
     pidProfile->old_delta = 0;
+    pidProfile->rc_factor = 0;
 
     pidProfile->P_f[ROLL] = 1.5f;     // new PID with preliminary defaults test carefully
     pidProfile->I_f[ROLL] = 0.4f;

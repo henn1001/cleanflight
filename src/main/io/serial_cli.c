@@ -494,6 +494,7 @@ const clivalue_t valueTable[] = {
 	{ "pterm_cut_hz",               VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.pterm_cut_hz, 0, 200 },
 	{ "dterm_cut_hz",               VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.dterm_cut_hz, 0, 200 },
 	{ "old_delta",                  VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.old_delta, 0, 1 },
+	{ "rc_factor",                  VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.rc_factor, 0, 200 },
 
 #ifdef BLACKBOX
     { "blackbox_rate_num",          VAR_UINT8  | MASTER_VALUE,  &masterConfig.blackbox_rate_num, 1, 32 },

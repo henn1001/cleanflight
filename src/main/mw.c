@@ -711,42 +711,118 @@ void filterGyro(void) {
     }
 }
 
-// RC Filter
-void filterRc(void){
-	int channel;
-    static int16_t lastcommand[4] = { 0, 0, 0, 0 };
-    static int16_t deltaRC[4] = { 0, 0, 0, 0 };
-    static int16_t factor, maxfactor;
-
-    if (!maxfactor) {
-    	if (masterConfig.looptime) {
-            maxfactor = (40000 / masterConfig.looptime + 1) / 2;
+void getArmingChannel(modeActivationCondition_t *modeActivationConditions, uint8_t *armingChannel) {
+    for (int index = 0; index < MAX_MODE_ACTIVATION_CONDITION_COUNT; index++) {
+        modeActivationCondition_t *modeActivationCondition = &modeActivationConditions[index];
+    	if (modeActivationCondition->modeId) {
+   	        *armingChannel = modeActivationCondition->auxChannelIndex;
     	}
-        else {
-            maxfactor = (40000 / cycleTime + 1) / 2;
+    }
+}
+
+void filterRc(void){
+    static int16_t lastCommand[4] = { 0, 0, 0, 0 };
+    static int16_t deltaRC[4] = { 0, 0, 0, 0 };
+    static int16_t loop[5] = { 0, 0, 0, 0, 0 };
+    static int16_t factor, rcInterpolationFactor, loopAvg;
+    static uint32_t rxRefreshRate;
+    static int16_t lastAux, deltaAux;
+	static uint8_t auxChannelToFilter;
+
+    // Set RC refresh rate for sampling and channels to filter
+    if (!rxRefreshRate) {
+        if (feature(FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM)) {
+    	    rxRefreshRate = 20000;
+
+    	    // TODO Channels to filter (including AUX to (fully) replace PPM/PWM averaging)
+    	    getArmingChannel(currentProfile->modeActivationConditions,&auxChannelToFilter);
+
          }
 
+        // FIXME configure all refresh rates (DRAFT)
+        else {
+    	    switch (masterConfig.rxConfig.serialrx_provider) {
+    	        case SERIALRX_SPEKTRUM1024:
+    	        case SERIALRX_SPEKTRUM2048:
+    	            rxRefreshRate = 10000;
+    	            break;
+    	        case SERIALRX_SBUS:
+    	            rxRefreshRate = 11000;
+    	            break;
+    	        case SERIALRX_SUMD:
+    	            rxRefreshRate = 10000;
+    	        	break;
+    	        case SERIALRX_SUMH:
+    	            rxRefreshRate = 10000;
+    	        	break;
+    	        case SERIALRX_XBUS_MODE_B:
+    	        case SERIALRX_XBUS_MODE_B_RJ01:
+    	            rxRefreshRate = 10000;
+    	            break;
+            }
+        }
+
+        // FIXME currently for testing purposes
+        if (currentProfile->pidProfile.rc_factor) {
+        	rcInterpolationFactor= currentProfile->pidProfile.rc_factor;
+        }
+        else {
+            // initial rcInterpolationFacto till the looptime average settles down when maxFactor not selected
+        	if (masterConfig.looptime) {
+        		rcInterpolationFactor = rxRefreshRate / masterConfig.looptime + 1;
+        	}
+        	else {
+        		rcInterpolationFactor = rxRefreshRate / cycleTime + 1;
+        	}
+        }
     }
 
-	if (isRXdataNew) {
-    	for (channel=0; channel < 4; channel++) {
-    		 deltaRC[channel] = rcData[channel] - lastcommand[channel];
-    		 lastcommand[channel] = rcData[channel];
-    	}
-        isRXdataNew = false;
-        factor = maxfactor - 1;
-    } else {
-        factor--;
+    // Currently for testing with different fixed rcInterpolationFactor
+    if (!currentProfile->pidProfile.rc_factor) {
+        // Averaging of cycleTime for more precise sampling
+        for (int count=0; count < 4; count++) {
+    	    loop[4-count]= loop[3-count];
+        }
+        loop[0] = cycleTime;
+
+
+        // Start recalculating new maxFactor from 5 loop iterations
+        if (loop[4] > 0) {
+        	uint16_t tmp = (loop[0] + loop[1] + loop[2] + loop[3] + loop[4]) / 5;
+
+        	// Jitter tolerance 400us
+            if (!((loopAvg + 400) < tmp ||  (loopAvg - 400) > tmp))  {
+                loopAvg = tmp;
+                rcInterpolationFactor = rxRefreshRate / loopAvg + 1;
+            }
+        }
     }
 
-    // Interpolate steps of rcdata
-    if (factor > 0) {
-    	for (channel=0; channel < 4; channel++) {
-            rcData[channel] = lastcommand[channel] - deltaRC[channel] * factor/maxfactor;
+    // Filter main channels (throttle,yaw,roll,pitch)
+    for (int channel=0; channel < 4; channel++) {
+        if (isRXdataNew) {
+            deltaRC[channel] = rcData[channel] - (lastCommand[channel] - deltaRC[channel] * factor / rcInterpolationFactor);
+            lastCommand[channel] = rcData[channel];
+
+            factor = rcInterpolationFactor - 1;
+        }
+
+        // Interpolate steps of rcData
+        rcData[channel] = lastCommand[channel] - deltaRC[channel] * factor/rcInterpolationFactor;
+    }
+
+    // Filtering of AUX channel (arm/disarm guard enhancment)
+    if (auxChannelToFilter) {
+    	if (isRXdataNew) {
+    	    deltaAux = rcData[auxChannelToFilter] - (lastAux - deltaAux * factor / rcInterpolationFactor);
+    	    lastAux = rcData[auxChannelToFilter];
     	}
-    } else {
-        factor = 0;
-	}
+
+    	// Interpolate steps of Aux
+    	rcData[auxChannelToFilter] = lastAux - deltaAux * factor/rcInterpolationFactor;
+    }
+
+    isRXdataNew = false;
 }
 
 void loop(void)
