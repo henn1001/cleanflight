@@ -151,53 +151,48 @@ TEST(MathsUnittest, TestRotateVectorAroundAxis)
 #if defined(FAST_MATH) || defined(VERY_FAST_MATH)
 TEST(MathsUnittest, TestFastTrigonometrySinCos)
 {
-    EXPECT_NEAR(sin_approx(0.0f),                        0.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(M_PIf / 2),                   1.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(-M_PIf / 2),                 -1.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(M_PIf),                       0.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(-M_PIf),                      0.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(3 * M_PIf / 2),              -1.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(-3 * M_PIf / 2),              1.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(2 * M_PIf),                   0.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(-2 * M_PIf),                  0.0f, 1e-6);
-    EXPECT_NEAR(sin_approx(3 * M_PIf / 4),               0.707106781f, 1e-6);
-    EXPECT_NEAR(sin_approx(-3 * M_PIf / 4),             -0.707106781f, 1e-6);
-    EXPECT_NEAR(sin_approx(2 * M_PIf + 3 * M_PIf / 4),   0.707106781f, 1e-6);
-    EXPECT_NEAR(sin_approx(-2 * M_PIf - 3 * M_PIf / 4), -0.707106781f, 1e-6);
+    double sinError = 0;
+    for (float x = -10 * M_PI; x < 10 * M_PI; x += M_PI / 300) {
+        double approxResult = sin_approx(x);
+        double libmResult = sinf(x);
+        sinError = MAX(sinError, fabs(approxResult - libmResult));
+    }
+    printf("sin_approx maximum absolute error = %e\n", sinError);
+    EXPECT_LE(sinError, 3e-6);
 
-    EXPECT_NEAR(cos_approx(0.0f),                        1.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(M_PIf / 2),                   0.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(-M_PIf / 2),                  0.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(M_PIf),                      -1.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(-M_PIf),                     -1.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(3 * M_PIf / 2),               0.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(-3 * M_PIf / 2),              0.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(2 * M_PIf),                   1.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(-2 * M_PIf),                  1.0f, 1e-6);
-    EXPECT_NEAR(cos_approx(3 * M_PIf / 4),              -0.707106781f, 1e-6);
-    EXPECT_NEAR(cos_approx(-3 * M_PIf / 4),             -0.707106781f, 1e-6);
-    EXPECT_NEAR(cos_approx(2 * M_PIf + 3 * M_PIf / 4),  -0.707106781f, 1e-6);
-    EXPECT_NEAR(cos_approx(-2 * M_PIf - 3 * M_PIf / 4), -0.707106781f, 1e-6);
+    double cosError = 0;
+    for (float x = -10 * M_PI; x < 10 * M_PI; x += M_PI / 300) {
+        double approxResult = cos_approx(x);
+        double libmResult = cosf(x);
+        cosError = MAX(cosError, fabs(approxResult - libmResult));
+    }
+    printf("cos_approx maximum absolute error = %e\n", cosError);
+    EXPECT_LE(cosError, 3e-6);
 }
 
 TEST(MathsUnittest, TestFastTrigonometryATan2)
 {
-    EXPECT_NEAR(atan2_approx(1, 1),          M_PIf / 4, 1e-6);
-    EXPECT_NEAR(atan2_approx(-1, 1),        -M_PIf / 4, 1e-6);
-    EXPECT_NEAR(atan2_approx(1, -1),     3 * M_PIf / 4, 1e-6);
-    EXPECT_NEAR(atan2_approx(-1, -1),   -3 * M_PIf / 4, 1e-6);
-    EXPECT_NEAR(atan2_approx(0, 1),                  0, 1e-6);
-    EXPECT_NEAR(atan2_approx(0, -1),             M_PIf, 1e-6);
-    EXPECT_NEAR(atan2_approx(1, 0),          M_PIf / 2, 1e-6);
-    EXPECT_NEAR(atan2_approx(-1, 0),        -M_PIf / 2, 1e-6);
+    double error = 0;
+    for (float x = -1.0f; x < 1.0f; x += 0.01) {
+        for (float y = -1.0f; x < 1.0f; x += 0.001) {
+            double approxResult = atan2_approx(y, x);
+            double libmResult = atan2f(y, x);
+            error = MAX(error, fabs(approxResult - libmResult));
+        }
+    }
+    printf("atan2_approx maximum absolute error = %e rads (%e degree)\n", error, error / M_PI * 180.0f);
+    EXPECT_LE(error, 1e-6);
 }
 
 TEST(MathsUnittest, TestFastTrigonometryACos)
 {
-    EXPECT_NEAR(acos_approx(0.0f),              M_PIf / 2, 1e-4);
-    EXPECT_NEAR(acos_approx(1.0f),                      0, 1e-4);
-    EXPECT_NEAR(acos_approx(-1.0f),                 M_PIf, 1e-4);
-    EXPECT_NEAR(acos_approx(0.707106781f),      M_PIf / 4, 1e-4);
-    EXPECT_NEAR(acos_approx(-0.707106781f), 3 * M_PIf / 4, 1e-4);
+    double error = 0;
+    for (float x = -1.0f; x < 1.0f; x += 0.001) {
+        double approxResult = acos_approx(x);
+        double libmResult = acos(x);
+        error = MAX(error, fabs(approxResult - libmResult));
+    }
+    printf("acos_approx maximum absolute error = %e rads (%e degree)\n", error, error / M_PI * 180.0f);
+    EXPECT_LE(error, 1e-4);
 }
 #endif
