@@ -424,12 +424,16 @@ void gpsReadNewDataI2C(void)
 
             // Other data
             if (gpsMsg.flags.newData) {
-                GPS_hdop = gpsMsg.hdop;
-                GPS_altitude = gpsMsg.altitude;
-                GPS_speed = gpsMsg.speed;
-                GPS_ground_course = gpsMsg.ground_course;
-                GPS_coord[LAT] = gpsMsg.latitude;
-                GPS_coord[LON] = gpsMsg.longitude;
+                if (gpsMsg.flags.fix3D) {
+                    GPS_hdop = gpsMsg.hdop;
+                    GPS_altitude = gpsMsg.altitude;
+                    GPS_speed = gpsMsg.speed;
+                    GPS_ground_course = gpsMsg.ground_course;
+                    GPS_coord[LAT] = gpsMsg.latitude;
+                    GPS_coord[LON] = gpsMsg.longitude;
+                }
+                else {
+                }
 
                 GPS_packetCount++;
 
@@ -439,11 +443,12 @@ void gpsReadNewDataI2C(void)
                     GPS_update = 1;
 
                 onGpsNewData();
+
+                // new data received and parsed, we're in business
+                gpsData.lastLastMessage = gpsData.lastMessage;
+                gpsData.lastMessage = millis();
             }
 
-            // new data received and parsed, we're in business
-            gpsData.lastLastMessage = gpsData.lastMessage;
-            gpsData.lastMessage = millis();
             sensorsSet(SENSOR_GPS);
         }
     }
