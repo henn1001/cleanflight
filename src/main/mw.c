@@ -723,6 +723,12 @@ void filterRc(void){
         // TODO Are there more different refresh rates?
         else {
     	    switch (masterConfig.rxConfig.serialrx_provider) {
+    	        case SERIALRX_SPEKTRUM1024:
+    	            rxRefreshRate = 22000;
+    	            break;
+    	        case SERIALRX_SPEKTRUM2048:
+    	            rxRefreshRate = 11000;
+    	            break;
     	        case SERIALRX_SBUS:
     	            rxRefreshRate = 11000;
     	            break;
