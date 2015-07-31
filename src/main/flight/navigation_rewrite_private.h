@@ -34,11 +34,16 @@
 #define NAV_ROLL_PITCH_MAX              300 // Max control input from NAV
 #define NAV_THROTTLE_CORRECTION_ANGLE   450
 
+//Update rate for position target update (minumum possible speed in cms will be this value)
+#define POSITION_TARGET_UPDATE_RATE_HZ  5
+
 // max 35hz update rate (almost maximum possible rate for BMP085)
 #define MAX_ALTITUDE_UPDATE_FREQUENCY_HZ    35
 #define MIN_ALTITUDE_UPDATE_FREQUENCY_HZ    15      // althold will not be applied if update rate is less than this constant
-
 #define MIN_POSITION_UPDATE_FREQUENCY_HZ    2       // GPS navigation (PH/WP/RTH) won't be applied unless update rate is above this
+
+#define NAV_VEL_ERROR_CUTOFF_FREQENCY_HZ    4       // low-pass filter on velocity error
+#define NAV_THROTTLE_CUTOFF_FREQENCY_HZ     2       // low-pass filter on throttle output
 
 // Should apply position-to-velocity PID controller for POS_HOLD
 #define navShouldApplyPosHold() ((navMode & (NAV_MODE_POSHOLD_2D | NAV_MODE_POSHOLD_3D)) != 0)
@@ -53,7 +58,7 @@
 #define navShouldApplyHeadingControl() ((navMode & (NAV_MODE_WP | NAV_MODE_RTH | NAV_MODE_POSHOLD_2D | NAV_MODE_POSHOLD_3D)) != 0)
 #define navShouldAdjustHeading() ((navMode & (NAV_MODE_WP | NAV_MODE_RTH)) != 0)
 
-#define navCanAdjustVerticalVelocityFromRCInput() (((navMode & (NAV_MODE_ALTHOLD | NAV_MODE_POSHOLD_3D)) != 0) || ((navMode == NAV_MODE_RTH) && (navRthState == NAV_RTH_STATE_HEAD_HOME)))
+#define navCanAdjustAltitudeFromRCInput() (((navMode & (NAV_MODE_ALTHOLD | NAV_MODE_POSHOLD_3D)) != 0) || ((navMode == NAV_MODE_RTH) && (navRthState == NAV_RTH_STATE_HEAD_HOME)))
 #define navCanAdjustHorizontalVelocityAndAttitudeFromRCInput() ((navMode & (NAV_MODE_POSHOLD_2D | NAV_MODE_POSHOLD_3D | NAV_MODE_RTH)) != 0)
 #define navCanAdjustHeadingFromRCInput() ((navMode & (NAV_MODE_POSHOLD_2D | NAV_MODE_POSHOLD_3D | NAV_MODE_RTH)) != 0)
 
@@ -104,49 +109,15 @@ typedef struct {
 } pController_t;
 
 typedef struct navigationPIDControllers_s {
-    pController_t   position[XYZ_AXIS_COUNT];
-    pController_t   velocity[XYZ_AXIS_COUNT];
-    pidController_t accel[XYZ_AXIS_COUNT];
+    pController_t   pos[XYZ_AXIS_COUNT];
+    pController_t   vel[XYZ_AXIS_COUNT];
+    pidController_t acc[XYZ_AXIS_COUNT];
 #if defined(NAV_HEADING_CONTROL_PID)
     pController_t   heading;
 #endif
 } navigationPIDControllers_t;
 
 typedef struct {
-    bool available;
-    float variance;
-    int32_t value;
-} navCLTAxisPos_s;
-
-typedef struct {
-    bool available;
-    float variance;
-    float value;
-} navCLTAxisVel_s;
-
-typedef struct {
-    struct {
-        // For GPS we are doing only altitude
-        navCLTAxisPos_s alt;
-        navCLTAxisVel_s vel[XYZ_AXIS_COUNT];
-    } gps;
-
-    struct {
-        navCLTAxisPos_s alt;
-        navCLTAxisVel_s vel;
-    } baro;
-
-    struct {
-        navCLTAxisPos_s alt;
-        navCLTAxisVel_s vel;
-    } sonar;
-
-    struct {
-        navCLTAxisVel_s vel[XYZ_AXIS_COUNT];
-    } imu;
-
-    struct {
-        navCLTAxisPos_s alt;
-        navCLTAxisVel_s vel[XYZ_AXIS_COUNT];
-    } estimated;
-} navCLTState_s;
+    //navPosition3D_t             targetPosition;
+    navigationPIDControllers_t  pids;
+} navigationPosControl_t;

@@ -140,4 +140,3 @@ extern int16_t navDebug[4];
 #define navigationControlsThrottleAngleCorrection() (0)
 
 #endif
-
