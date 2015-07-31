@@ -77,10 +77,14 @@ typedef struct {
     float kI;
     float kD;
     float Imax;
-} PID_PARAM;
+} pidControllerParam_t;
 
 typedef struct {
-    PID_PARAM param;
+    float kP;
+} pControllerParam_t;
+
+typedef struct {
+    pidControllerParam_t param;
     float integrator;       // integrator value
     float last_error;       // last input for derivative
     float pterm_filter_state;
@@ -89,14 +93,22 @@ typedef struct {
 #if defined(NAV_BLACKBOX)
     float lastP, lastI, lastD;
 #endif
-} PID;
+} pidController_t;
+
+typedef struct {
+    pControllerParam_t param;
+    float pterm_filter_state;
+#if defined(NAV_BLACKBOX)
+    float lastP;
+#endif
+} pController_t;
 
 typedef struct navigationPIDControllers_s {
-    PID position[XYZ_AXIS_COUNT];
-    PID velocity[XYZ_AXIS_COUNT];
-    PID velocity_nav[2];
+    pController_t   position[XYZ_AXIS_COUNT];
+    pController_t   velocity[XYZ_AXIS_COUNT];
+    pidController_t accel[XYZ_AXIS_COUNT];
 #if defined(NAV_HEADING_CONTROL_PID)
-    PID heading;
+    pController_t   heading;
 #endif
 } navigationPIDControllers_t;
 
