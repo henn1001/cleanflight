@@ -42,8 +42,11 @@
 #define MIN_ALTITUDE_UPDATE_FREQUENCY_HZ    15      // althold will not be applied if update rate is less than this constant
 #define MIN_POSITION_UPDATE_FREQUENCY_HZ    2       // GPS navigation (PH/WP/RTH) won't be applied unless update rate is above this
 
-#define NAV_VEL_ERROR_CUTOFF_FREQENCY_HZ    4       // low-pass filter on velocity error
+#define NAV_VEL_ERROR_CUTOFF_FREQENCY_HZ    4       // low-pass filter on Z-velocity error
 #define NAV_THROTTLE_CUTOFF_FREQENCY_HZ     2       // low-pass filter on throttle output
+#define NAV_ACCEL_ERROR_CUTOFF_FREQUENCY_HZ 2       // low-pass filter on XY-acceleration error
+
+#define NAV_ACCELERATION_XY_MAX             980.0f  // cm/s/s
 
 // Should apply position-to-velocity PID controller for POS_HOLD
 #define navShouldApplyPosHold() ((navMode & (NAV_MODE_POSHOLD_2D | NAV_MODE_POSHOLD_3D)) != 0)
@@ -118,6 +121,5 @@ typedef struct navigationPIDControllers_s {
 } navigationPIDControllers_t;
 
 typedef struct {
-    //navPosition3D_t             targetPosition;
     navigationPIDControllers_t  pids;
 } navigationPosControl_t;

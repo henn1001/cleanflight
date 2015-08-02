@@ -263,7 +263,7 @@ bool navIsThrustFacingDownwards(rollAndPitchInclination_t *inclination)
 void resetNavigation(void)
 {
     int i;
-    
+
     pidReset(&posControl.pids.acc[Z]);
 
 #if defined(NAV_3D)
@@ -285,7 +285,7 @@ void resetNavigation(void)
  *  - position & altitude might be updated using different sensors,
  *    so we update them separately
  *-----------------------------------------------------------*/
-#if defined(NAV_3D) 
+#if defined(NAV_3D)
 static void updateActualHorizontalPositionAndVelocity(int32_t newLat, int32_t newLon, float newVelX, float newVelY)
 {
     actualPosition.coordinates[LAT] = newLat;
@@ -410,71 +410,6 @@ static bool navIsWaypointReached(navPosition3D_t *currentPos, navPosition3D_t *d
     return (wpDistance <= navProfile->nav_wp_radius);
 }
 
-static void calculateDesiredHorizontalVelocity(navPosition3D_t *currentPos, navPosition3D_t *destinationPos, float dTnav, bool * slowNav)
-{
-    navPosition3D_t posError;
-    uint32_t wpDistance;
-
-    UNUSED(dTnav);
-
-    // Calculate position error
-    calculatePositionError(currentPos, destinationPos, &posError);
-    calculateDistanceAndBearingToDestination(currentPos, destinationPos, &wpDistance, NULL);
-
-    if (STATE(FIXED_WING)) { // FIXED_WING
-        // TODO
-    }
-    else { // MULTIROTOR
-        // Algorithm depends on navigation mode (WP/RTH or PH)
-        // We use PH PID governors if explicitly in NAV_MODE_POSHOLD or within 2*waypoint radius
-        if (navShouldApplyPosHold() || (navShouldApplyWaypoint() && (wpDistance < 2 * navProfile->nav_wp_radius))) {
-            float newVelX = posError.coordinates[LAT] * posControl.pids.pos[X].param.kP;
-            float newVelY = posError.coordinates[LON] * posControl.pids.pos[Y].param.kP;
-            float newVel = sqrtf(sq(newVelX) + sq(newVelY));
-
-            if (newVel > navProfile->nav_speed_max) {
-                newVelX = newVelX * (navProfile->nav_speed_max / newVel);
-                newVelY = newVelY * (navProfile->nav_speed_max / newVel);
-            }
-
-            desiredVelocity[X] = newVelX;
-            desiredVelocity[Y] = newVelY;
-
-            *slowNav = true;
-        }
-        else if (navShouldApplyWaypoint()) {
-            float navCurrentSpeed = sqrtf(sq(actualVelocity[X]) + sq(actualVelocity[Y]));
-            float targetSpeed = MIN(navProfile->nav_speed_max, wpDistance / 2.0f); // if close - navigate to reach a waypoint within 2 sec.
-
-            // Avoid fast acceleration, increase speed in small steps
-            if ((navCurrentSpeed + 50.0f) < targetSpeed) {
-                targetSpeed = navCurrentSpeed + 50.0f;
-            }
-
-            targetSpeed = MAX(navProfile->nav_speed_min, targetSpeed);  // go at least min_speed
-
-            // Calculate desired horizontal velocities
-            desiredVelocity[X] = targetSpeed * (posError.coordinates[LAT] / wpDistance);
-            desiredVelocity[Y] = targetSpeed * (posError.coordinates[LON] / wpDistance);
-
-            *slowNav = false;
-        }
-        else {
-            desiredVelocity[X] = 0;
-            desiredVelocity[Y] = 0;
-
-            *slowNav = false;
-        }
-    }
-
-#if defined(NAV_BLACKBOX)
-    navDesiredVelocity[X] = constrain(lrintf(desiredVelocity[X]), -32678, 32767);
-    navDesiredVelocity[Y] = constrain(lrintf(desiredVelocity[Y]), -32678, 32767);
-    navLatestPositionError[X] = constrain(lrintf(posError.coordinates[LAT]), -32678, 32767);
-    navLatestPositionError[Y] = constrain(lrintf(posError.coordinates[LON]), -32678, 32767);
-#endif
-}
-
 static void calculateDesiredHeading(navPosition3D_t *currentPos, navPosition3D_t *destinationPos, float dTnav)
 {
     UNUSED(dTnav);
@@ -522,7 +457,7 @@ static void calculateDesiredHeading(navPosition3D_t *currentPos, navPosition3D_t
 /*-----------------------------------------------------------
  * NAV home position
  *-----------------------------------------------------------*/
-#if defined(NAV_3D) 
+#if defined(NAV_3D)
 void resetHomePosition(void)
 {
     if (STATE(GPS_FIX) && GPS_numSat >= 5) {
@@ -632,7 +567,7 @@ static void calculateAndUpdateThrottleAngleCorrection(uint16_t throttle)
     if (tiltAngle < 100) {  // < 10 deg
         if (hoverThrottleAtZeroTiltInitialized) {
             // Apply IIR LPF to throttle - smooth spikes and variances
-            hoverThrottleAtZeroTilt = hoverThrottleAtZeroTilt * NAV_THROTTLE_ANGLE_CORRECTION_CF + 
+            hoverThrottleAtZeroTilt = hoverThrottleAtZeroTilt * NAV_THROTTLE_ANGLE_CORRECTION_CF +
                                       throttle * (1.0f - NAV_THROTTLE_ANGLE_CORRECTION_CF);
         }
         else {
@@ -646,7 +581,7 @@ static void calculateAndUpdateThrottleAngleCorrection(uint16_t throttle)
             newThrottleCoffection = constrainf(newThrottleCoffection, 0, NAV_THROTTLE_ANGLE_CORRECTION_MAX);
 
             // Adjust this slowly
-            throttleAngleCorrectionValue = throttleAngleCorrectionValue * NAV_THROTTLE_ANGLE_CORRECTION_CF + 
+            throttleAngleCorrectionValue = throttleAngleCorrectionValue * NAV_THROTTLE_ANGLE_CORRECTION_CF +
                                            newThrottleCoffection * (1.0f - NAV_THROTTLE_ANGLE_CORRECTION_CF);
 #if defined(NAV_BLACKBOX)
             navThrottleAngleCorrection = constrain(lrintf(throttleAngleCorrectionValue), -32678, 32767);
@@ -673,74 +608,6 @@ static void setAltHoldInitialThrottle(int16_t throttle)
 /*-----------------------------------------------------------
  * NAV pilot's adjustments to attitude/throttle
  *-----------------------------------------------------------*/
-#if defined(NAV_3D)
-static void adjustHorizontalVelocityFromRCInput()
-{
-    // In some cases pilot has no control over flight direction
-    if (!navCanAdjustHorizontalVelocityAndAttitudeFromRCInput())
-        return;
-
-    if (STATE(FIXED_WING)) { // FIXED_WING
-        // TODO
-    }
-    else { // MULTIROTOR
-        int16_t rcPitchAdjustment = applyDeadband(rcCommand[PITCH], navProfile->nav_rc_deadband);
-        int16_t rcRollAdjustment = applyDeadband(rcCommand[ROLL], navProfile->nav_rc_deadband);
-
-        if (rcPitchAdjustment || rcRollAdjustment) {
-            // Calculate desired velocities according to stick movement (copter frame of reference)
-            float rcVelX = rcPitchAdjustment * navProfile->nav_manual_speed_horizontal / (500.0f - navProfile->nav_rc_deadband);
-            float rcVelY = rcRollAdjustment * navProfile->nav_manual_speed_horizontal / (500.0f - navProfile->nav_rc_deadband);
-
-            // Rotate these velocities from body frame to to earth frame
-            desiredVelocity[X] = rcVelX * cosNEDtoXYZ - rcVelY * sinNEDtoXYZ;
-            desiredVelocity[Y] = rcVelX * sinNEDtoXYZ + rcVelY * cosNEDtoXYZ;
-
-            // If we are in position hold mode, so adjust poshold position
-            // It will allow "sharded" control in WP/RTH mode while not messing up with target position
-            if (navShouldApplyPosHold()) {
-                activeWpOrHoldPosition.coordinates[LAT] = actualPosition.coordinates[LAT];
-                activeWpOrHoldPosition.coordinates[LON] = actualPosition.coordinates[LON];
-            }
-        }
-    }
-}
-
-static void adjustAttitudeFromRCInput(void)
-{
-    // In some cases pilot has no control over flight direction
-    if (!navCanAdjustHorizontalVelocityAndAttitudeFromRCInput())
-        return;
-
-    if (STATE(FIXED_WING)) { // FIXED_WING
-        // TODO
-    }
-    else { // MULTIROTOR
-        int16_t rcPitchAdjustment = applyDeadband(rcCommand[PITCH], navProfile->nav_rc_deadband);
-        int16_t rcRollAdjustment = applyDeadband(rcCommand[ROLL], navProfile->nav_rc_deadband);
-
-        if (rcPitchAdjustment || rcRollAdjustment) {
-            // Direct attitude control
-            rcAdjustment[PITCH] = rcPitchAdjustment;
-            rcAdjustment[ROLL] = rcRollAdjustment;
-
-            // If we are in position hold mode, so adjust poshold position
-            if (navShouldApplyPosHold()) {
-                activeWpOrHoldPosition.coordinates[LAT] = actualPosition.coordinates[LAT];
-                activeWpOrHoldPosition.coordinates[LON] = actualPosition.coordinates[LON];
-
-                // When sticks are released we should restart PIDs
-                pidReset(&posControl.pids.acc[X]);
-                pidReset(&posControl.pids.acc[Y]);
-            }
-            else if (navShouldApplyWaypoint()) {
-                pidReset(&posControl.pids.acc[X]);
-                pidReset(&posControl.pids.acc[Y]);
-            }
-        }
-    }
-}
-
 #if defined(NAV_HEADING_CONTROL_PID)
 static void adjustHeadingFromRCInput()
 {
@@ -764,7 +631,6 @@ static void adjustHeadingFromRCInput()
         }
     }
 }
-#endif
 #endif
 
 /*-----------------------------------------------------------
@@ -838,6 +704,12 @@ static void updateAltitudeVelocityController(uint32_t deltaMicros)
             }
         }
     }
+
+#if defined(NAV_BLACKBOX)
+    navDesiredVelocity[Z] = constrain(lrintf(desiredVelocity[Z]), -32678, 32767);
+    navLatestPositionError[Z] = constrain(lrintf(altitudeError), -32678, 32767);
+    navTargetAltitude = constrain(lrintf(activeWpOrHoldPosition.altitude), -32678, 32767);
+#endif
 }
 
 static void updateAltitudeAccelController(uint32_t deltaMicros)
@@ -856,6 +728,13 @@ static void updateAltitudeThrottleController(uint32_t deltaMicros)
     float accError = desiredAcceleration[Z] - imuAverageAcceleration[Z];
 
     rcAdjustment[THROTTLE] = pidGetPID(accError, deltaMicros * 1e-6f, &posControl.pids.acc[Z]);
+
+#if defined(NAV_BLACKBOX)
+    NAV_BLACKBOX_DEBUG(0, accError);
+    NAV_BLACKBOX_DEBUG(1, posControl.pids.acc[Z].lastP);
+    NAV_BLACKBOX_DEBUG(2, posControl.pids.acc[Z].lastI);
+    NAV_BLACKBOX_DEBUG(3, posControl.pids.acc[Z].lastD);
+#endif
 
     if (navProfile->flags.throttle_tilt_comp) {
         rcAdjustment[THROTTLE] += calculateThrottleAngleCorrection(throttleAngleCorrectionValue, NAV_THROTTLE_CORRECTION_ANGLE);
@@ -927,94 +806,237 @@ static void applyAltitudeController(uint32_t currentTime)
     }
 }
 
-static void applyPositionHoldAndWaypoint(uint32_t currentTime)
+/*-----------------------------------------------------------
+ * XY position controller
+ *-----------------------------------------------------------*/
+static void resetPositionController()
 {
-    static uint32_t previousTime;
-    static float axisAdjustment[2] = {0, 0};
+    if (STATE(FIXED_WING)) { // FIXED_WING
+        // TODO
+    }
+    else {
+        int axis;
+        for (axis = 0; axis < 2; axis++) {
+            pidReset(&posControl.pids.acc[axis]);
+            rcAdjustment[axis] = 0;
+            lastAxisAdjustment[axis] = 0;
+        }
+    }
+}
 
-    if (navFlags.horizontalPositionNewData) {
-        float dTnav = (currentTime - previousTime) / 1e6;
-        previousTime = currentTime;
+static void updatePositionTargetFromRCInput(uint32_t deltaMicros)
+{
+    // In some cases pilot has no control over flight direction
+    if (!navCanAdjustHorizontalVelocityAndAttitudeFromRCInput())
+        return;
 
-        if (dTnav < (1.0f / MIN_POSITION_UPDATE_FREQUENCY_HZ)) {
-            bool slowNav = false;
-            calculateDesiredHorizontalVelocity(&actualPosition, &activeWpOrHoldPosition, dTnav, &slowNav);
+    if (navProfile->flags.user_control_mode != NAV_GPS_CRUISE)
+        return;
 
-            // This should be applied in NAV_GPS_CRUISE mode
-            if (navProfile->flags.user_control_mode == NAV_GPS_CRUISE) {
-                adjustHorizontalVelocityFromRCInput();
+    if (STATE(FIXED_WING)) { // FIXED_WING
+        // TODO
+    }
+    else { // MULTIROTOR
+        int16_t rcPitchAdjustment = applyDeadband(rcCommand[PITCH], navProfile->nav_rc_deadband);
+        int16_t rcRollAdjustment = applyDeadband(rcCommand[ROLL], navProfile->nav_rc_deadband);
+
+        if (rcPitchAdjustment || rcRollAdjustment) {
+            float rcVelX = rcPitchAdjustment * navProfile->nav_manual_speed_horizontal / (500.0f - navProfile->nav_rc_deadband);
+            float rcVelY = rcRollAdjustment * navProfile->nav_manual_speed_horizontal / (500.0f - navProfile->nav_rc_deadband);
+
+            // Rotate these velocities from body frame to to earth frame
+            float nedVelX = rcVelX * cosNEDtoXYZ - rcVelY * sinNEDtoXYZ;
+            float nedVelY = rcVelX * sinNEDtoXYZ + rcVelY * cosNEDtoXYZ;
+
+            // Calculate new position target
+            activeWpOrHoldPosition.coordinates[LAT] = lrintf(activeWpOrHoldPosition.coordinates[LAT] + (nedVelX * deltaMicros * 1e-6f / DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR));
+            activeWpOrHoldPosition.coordinates[LON] = lrintf(activeWpOrHoldPosition.coordinates[LON] + (nedVelY * deltaMicros * 1e-6f / (DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR * gpsScaleLonDown)));
+        }
+    }
+}
+
+static void updatePositionLeanAngleFromRCInput(uint32_t deltaMicros)
+{
+    UNUSED(deltaMicros);
+
+    // In some cases pilot has no control over flight direction
+    if (!navCanAdjustHorizontalVelocityAndAttitudeFromRCInput())
+        return;
+
+    if (navProfile->flags.user_control_mode != NAV_GPS_ATTI)
+        return;
+
+    if (STATE(FIXED_WING)) { // FIXED_WING
+        // TODO
+    }
+    else { // MULTIROTOR
+        int16_t rcPitchAdjustment = applyDeadband(rcCommand[PITCH], navProfile->nav_rc_deadband);
+        int16_t rcRollAdjustment = applyDeadband(rcCommand[ROLL], navProfile->nav_rc_deadband);
+
+        if (rcPitchAdjustment || rcRollAdjustment) {
+            // Direct attitude control
+            rcAdjustment[PITCH] = rcPitchAdjustment;
+            rcAdjustment[ROLL] = rcRollAdjustment;
+
+            // If we are in position hold mode, so adjust poshold position
+            if (navShouldApplyPosHold()) {
+                activeWpOrHoldPosition.coordinates[LAT] = actualPosition.coordinates[LAT];
+                activeWpOrHoldPosition.coordinates[LON] = actualPosition.coordinates[LON];
+
+                // When sticks are released we should restart PIDs
+                pidReset(&posControl.pids.acc[X]);
+                pidReset(&posControl.pids.acc[Y]);
             }
-
-            // Now convert desired velocities to attitude corrections
-            if (STATE(FIXED_WING)) { // FIXED_WING
-                // TODO
-            }
-            else { // MULTIROTOR
-                int axis;
-
-                // FIXME: Use the same rate controller for WP and PH
-                // Now calculate pitch/roll adjustments to achieve desired velocities
-                float error;
-
-                if (navShouldApplyPosHold() || slowNav) {
-                    // Calculate pitch/roll
-                    for (axis = 0; axis < 2; axis++) {
-                        error = constrainf(desiredVelocity[axis] - actualVelocity[axis], -500.0f, 500.0f); // limit error to 5 m/s
-                        axisAdjustment[axis] = pidGetPID(error, dTnav, &posControl.pids.acc[axis]);
-                    }
-                }
-                else if (navShouldApplyWaypoint()) {
-                    // Calculate pitch/roll
-                    for (axis = 0; axis < 2; axis++) {
-                        error = constrainf(desiredVelocity[axis] - actualVelocity[axis], -500.0f, 500.0f); // limit error to 5 m/s
-                        axisAdjustment[axis] = pidGetPID(error, dTnav, &posControl.pids.acc[axis]);
-                    }
-                }
-
-                /* Apply some smoothing to attitude adjustments */
-                for (axis = 0; axis < 2; axis++) {
-                    axisAdjustment[axis] = (lastAxisAdjustment[axis] + axisAdjustment[axis]) * 0.5f;
-                    lastAxisAdjustment[axis] = axisAdjustment[axis];
-                }
-
-                /* Apply NAV expo curve */
-                // Ported over from CrashPilot1000's TestCode3
-                if (navProfile->nav_expo) {
-                    float navExpo = constrain(navProfile->nav_expo, 0, 100) / 100.0f;
-                    for (axis = 0; axis < 2; axis++)
-                        axisAdjustment[axis] = applyExpoCurve(axisAdjustment[axis] / 10.0f / (float)NAV_ROLL_PITCH_MAX, navExpo) * (float)NAV_ROLL_PITCH_MAX;
-                }
-                else {
-                    for (axis = 0; axis < 2; axis++)
-                        axisAdjustment[axis] = constrainf(axisAdjustment[axis] / 10.0f, -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX);
-                }
-            }
-
-            // Control for NAV_GPS_ATTI mode
-            if (navProfile->flags.user_control_mode == NAV_GPS_ATTI) {
-                adjustAttitudeFromRCInput();
+            else if (navShouldApplyWaypoint()) {
+                pidReset(&posControl.pids.acc[X]);
+                pidReset(&posControl.pids.acc[Y]);
             }
         }
+    }
+}
+
+static void updatePositionVelocityController(uint32_t deltaMicros)
+{
+    UNUSED(deltaMicros);
+
+    navPosition3D_t posError;
+    uint32_t wpDistance;
+
+   // Calculate position error
+    calculatePositionError(&actualPosition, &activeWpOrHoldPosition, &posError);
+    calculateDistanceAndBearingToDestination(&actualPosition, &activeWpOrHoldPosition, &wpDistance, NULL);
+
+    if (STATE(FIXED_WING)) { // FIXED_WING
+        // TODO
+    }
+    else { // MULTIROTOR
+        float newVelX = posError.coordinates[LAT] * posControl.pids.pos[X].param.kP;
+        float newVelY = posError.coordinates[LON] * posControl.pids.pos[Y].param.kP;
+        float newVelTotal = sqrtf(sq(newVelX) + sq(newVelY));
+
+        if (newVelTotal > navProfile->nav_speed_max) {
+            newVelX = navProfile->nav_speed_max * (newVelX / newVelTotal);
+            newVelY = navProfile->nav_speed_max * (newVelY / newVelTotal);
+        }
+
+        desiredVelocity[X] = newVelX;
+        desiredVelocity[Y] = newVelY;
+    }
+
+#if defined(NAV_BLACKBOX)
+    navDesiredVelocity[X] = constrain(lrintf(desiredVelocity[X]), -32678, 32767);
+    navDesiredVelocity[Y] = constrain(lrintf(desiredVelocity[Y]), -32678, 32767);
+    navLatestPositionError[X] = constrain(lrintf(posError.coordinates[LAT]), -32678, 32767);
+    navLatestPositionError[Y] = constrain(lrintf(posError.coordinates[LON]), -32678, 32767);
+#endif
+}
+
+static void updatePositionAccelController(uint32_t deltaMicros)
+{
+    UNUSED(deltaMicros);
+
+    float velError;
+
+    velError = constrainf(desiredVelocity[X] - actualVelocity[X], -500.0f, 500.0f); // limit error to 5 m/s
+    float newAccelX = velError * posControl.pids.vel[X].param.kP;
+
+    velError = constrainf(desiredVelocity[Y] - actualVelocity[Y], -500.0f, 500.0f); // limit error to 5 m/s
+    float newAccelY = velError * posControl.pids.vel[X].param.kP;
+
+    float newAccelTotal = sqrtf(sq(newAccelX) + sq(newAccelY));
+    if (newAccelTotal > NAV_ACCELERATION_XY_MAX) {
+        newAccelX = NAV_ACCELERATION_XY_MAX * (newAccelX / newAccelTotal);
+        newAccelY = NAV_ACCELERATION_XY_MAX * (newAccelY / newAccelTotal);
+    }
+
+    desiredAcceleration[X] = newAccelX;
+    desiredAcceleration[Y] = newAccelY;
+}
+
+static void updatePositionLeanAngleController(uint32_t deltaMicros)
+{
+    static float accFilterState[2];
+    float axisAdjustment[2];
+    int axis;
+
+    for (axis = 0; axis < 2; axis++) {
+        float accError = desiredAcceleration[axis] - imuAverageAcceleration[axis];
+        accError = pidApplyFilter(accError, NAV_ACCEL_ERROR_CUTOFF_FREQUENCY_HZ, deltaMicros * 1e-6f, &accFilterState[axis]);
+
+        // Calculate N-E adjustments
+        axisAdjustment[axis] = pidGetPID(accError, deltaMicros * 1e-6f, &posControl.pids.acc[axis]);
+
+        /* Apply some smoothing */
+        for (axis = 0; axis < 2; axis++) {
+            axisAdjustment[axis] = (lastAxisAdjustment[axis] + axisAdjustment[axis]) * 0.5f;
+            lastAxisAdjustment[axis] = axisAdjustment[axis];
+        }
+
+        /* Apply NAV expo curve */
+        /*
+        if (navProfile->nav_expo) {
+            float navExpo = constrain(navProfile->nav_expo, 0, 100) / 100.0f;
+            for (axis = 0; axis < 2; axis++)
+                axisAdjustment[axis] = applyExpoCurve(axisAdjustment[axis] / (float)NAV_ROLL_PITCH_MAX, navExpo) * (float)NAV_ROLL_PITCH_MAX;
+        }
         else {
-            int i;
-            for (i = 0; i < 2; i++) {
-                axisAdjustment[i] = 0;
-                lastAxisAdjustment[i] = 0;
-                pidReset(&posControl.pids.acc[i]);
-            }
+            for (axis = 0; axis < 2; axis++)
+                axisAdjustment[axis] = constrainf(axisAdjustment[axis], -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX);
+        }
+        */
+        for (axis = 0; axis < 2; axis++)
+            axisAdjustment[axis] = constrainf(axisAdjustment[axis], -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX);
+
+        // Rotate axis adjustments into aircraft frame of reference. Recalculating this every loop allows us to account faster for heading variations
+        rcAdjustment[PITCH] = axisAdjustment[X] * cosNEDtoXYZ + axisAdjustment[Y] * sinNEDtoXYZ;
+        rcAdjustment[ROLL] = -axisAdjustment[X] * sinNEDtoXYZ + axisAdjustment[Y] * cosNEDtoXYZ;
+    }
+}
+
+static void applyPositionController(uint32_t currentTime)
+{
+    static uint32_t previousTimeTargetPositionUpdate;   // Occurs @ POSITION_TARGET_UPDATE_RATE_HZ
+    static uint32_t previousTimePositionUpdate;         // Occurs @ GPS update rate
+    static uint32_t previousTimeUpdate;                 // Occurs @ looptime rate
+
+    uint32_t deltaMicros = currentTime - previousTimeUpdate;
+    previousTimeUpdate = currentTime;
+
+    // Update altitude target from RC input
+    if (currentTime - previousTimeTargetPositionUpdate >= (1000000 / POSITION_TARGET_UPDATE_RATE_HZ)) {
+        uint32_t deltaMicrosPositionTargetUpdate = currentTime - previousTimeTargetPositionUpdate;
+        previousTimeTargetPositionUpdate = currentTime;
+        updatePositionTargetFromRCInput(deltaMicrosPositionTargetUpdate);
+    }
+
+    // If we have new position - update velocity and acceleration controllers
+    if (navFlags.horizontalPositionNewData) {
+        uint32_t deltaMicrosPositionUpdate = currentTime - previousTimePositionUpdate;
+        previousTimePositionUpdate = currentTime;
+
+        if (deltaMicrosPositionUpdate < (1000000 / MIN_POSITION_UPDATE_FREQUENCY_HZ)) {
+            updatePositionVelocityController(deltaMicrosPositionUpdate);
+            updatePositionAccelController(deltaMicrosPositionUpdate);
+        }
+        else {
+            resetPositionController();
         }
 
         // Indicate that information is no longer usable
         navFlags.horizontalPositionNewData = 0;
     }
 
-    // Rotate axis adjustments into aircraft frame of reference. Recalculating this every loop allows us to account faster for heading variations
-    rcAdjustment[PITCH] = axisAdjustment[X] * cosNEDtoXYZ + axisAdjustment[Y] * sinNEDtoXYZ;
-    rcAdjustment[ROLL] = -axisAdjustment[X] * sinNEDtoXYZ + axisAdjustment[Y] * cosNEDtoXYZ;
+    // Update lean angle controller. This update occurs at loop rate
+    if (STATE(FIXED_WING)) { // FIXED_WING
+        // TODO
+    }
+    else {
+        updatePositionLeanAngleController(deltaMicros);
+        updatePositionLeanAngleFromRCInput(deltaMicros);
 
-    // Apply rcAdjustment to pitch/roll
-    rcCommand[PITCH] = constrain(rcAdjustment[PITCH], -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX);
-    rcCommand[ROLL] = constrain(rcAdjustment[ROLL], -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX);
+        rcCommand[PITCH] = constrain(rcAdjustment[PITCH], -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX);
+        rcCommand[ROLL] = constrain(rcAdjustment[ROLL], -NAV_ROLL_PITCH_MAX, NAV_ROLL_PITCH_MAX);
+    }
 }
 
 static void applyHeadingController(uint32_t currentTime)
@@ -1077,7 +1099,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
         }
     }
 
-    // If throttle low don't apply navigation either 
+    // If throttle low don't apply navigation either
     if (!navEnabled) {
         // If lock_nav_until_takeoff & some NAV mode enabled, lock throttle to minimum, prevent accidental takeoff
         if ((selectNavModeFromBoxModeInput() != NAV_MODE_NONE) && navProfile->flags.lock_nav_until_takeoff) { // && navProfile->flags.use_midrc_for_althold
@@ -1100,7 +1122,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
 #if defined(NAV_3D)
         // Calculate PH/RTH/WP and attitude adjustment
         if (navShouldApplyPosHold() || navShouldApplyWaypoint()) {
-            applyPositionHoldAndWaypoint(currentTime);
+            applyPositionController(currentTime);
         }
 
         // Apply rcAdjustment to yaw
@@ -1354,7 +1376,10 @@ void updateWaypointsAndNavigationMode(void)
                     if (distanceToHome < navProfile->nav_min_rth_distance) {
                         // Prevent RTH jump in your face, when arming copter accidentally activating RTH (or RTH on failsafe)
                         // Inspired by CrashPilot1000's TestCode3
+                        // Reset home to currect position
                         resetHomePosition();
+                        // Set position lock on home and heading to original heading
+                        setNextWaypointAndHeadingLock(homePosition.coordinates[LAT], homePosition.coordinates[LON], actualPosition.altitude, homePosition.heading);
                         navRthState = NAV_RTH_STATE_HOME_AUTOLAND;
                     }
                     else {
@@ -1367,15 +1392,25 @@ void updateWaypointsAndNavigationMode(void)
                     break;
                 case NAV_RTH_STATE_CLIMB_TO_SAVE_ALTITUDE:
                     if (actualPosition.altitude > 1000) {
+                        // Set target position to home and calculate original bearing
                         setNextWaypointAndCalculateBearing(homePosition.coordinates[LAT], homePosition.coordinates[LON], actualPosition.altitude);
                         navRthState = NAV_RTH_STATE_HEAD_HOME;
+                    }
+                    else {
+                        // TODO: a safeguard that would emergency land us if can not climb to desired altitude
                     }
                     break;
                 case NAV_RTH_STATE_HEAD_HOME:
                     // Stay at this state until home reached
                     if (navIsWaypointReached(&actualPosition, &homePosition)) {
+                        // Set position lock on home and heading to original heading when lauched
+                        setNextWaypointAndHeadingLock(homePosition.coordinates[LAT], homePosition.coordinates[LON], actualPosition.altitude, homePosition.heading);
+                        // Reset landing detector
                         isLandingDetected(true);
                         navRthState = NAV_RTH_STATE_HOME_AUTOLAND;
+                    }
+                    else {
+                        // TODO: a safeguard that would emergency land us in case of unexpected situation - battery low, etc
                     }
                     break;
                 case NAV_RTH_STATE_HOME_AUTOLAND:
@@ -1384,6 +1419,10 @@ void updateWaypointsAndNavigationMode(void)
                     }
                     else if (isLandingDetected(false)) {
                         navRthState = NAV_RTH_STATE_LANDED;
+                    }
+                    else {
+                        // Still landing. Altitude controller takes care of gradual descent.
+                        // TODO: A safeguard in case of emergency
                     }
                     break;
                 case NAV_RTH_STATE_LANDED:
