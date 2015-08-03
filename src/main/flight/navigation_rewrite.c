@@ -943,6 +943,7 @@ static void updatePositionAccelController(uint32_t deltaMicros)
     velError = constrainf(desiredVelocity[Y] - actualVelocity[Y], -500.0f, 500.0f); // limit error to 5 m/s
     float newAccelY = velError * posControl.pids.vel[X].param.kP;
 
+    // Check if required acceleration exceeds maximum allowed accel
     float newAccelTotal = sqrtf(sq(newAccelX) + sq(newAccelY));
     if (newAccelTotal > NAV_ACCELERATION_XY_MAX) {
         newAccelX = NAV_ACCELERATION_XY_MAX * (newAccelX / newAccelTotal);
@@ -963,7 +964,11 @@ static void updatePositionLeanAngleController(uint32_t deltaMicros)
         float accError = desiredAcceleration[axis] - imuAverageAcceleration[axis];
         accError = pidApplyFilter(accError, NAV_ACCEL_ERROR_CUTOFF_FREQUENCY_HZ, deltaMicros * 1e-6f, &accFilterState[axis]);
 
-        // Calculate N-E adjustments
+        // This PID controller takes acceleration (cm/s/s) and outputs banking angle. We can safely assume that Z-component of thrust is equal to gravity (hovering)
+        // In such case P-component can be calculated using pure trigonometry: PITCH = atan2(ACCELX_CMSS, GRAVITY_CMSS) * (1800 / M_PI_F), roll calculation is similar
+        // However we want to keep code simple and fast (we are running this at main loop rate). 
+        // With error < 1% atan2 here can be approximated linearly up to 100 cm/s/s (kP = 0.585). 
+        // If we put kP=0.555 we get error no more than 6% in the whole range of accelerations from 0 up to 600 cm/s/s (banking angle will be ~30 deg)
         axisAdjustment[axis] = pidGetPID(accError, deltaMicros * 1e-6f, &posControl.pids.acc[axis]);
 
         /* Apply some smoothing */
@@ -1467,21 +1472,24 @@ void navigationUsePIDs(pidProfile_t *pidProfile)
     // Initialize position hold PI-controller
     for (axis = 0; axis < 2; axis++) {
         pInit(&posControl.pids.pos[axis], (float)pidProfile->P8[PIDPOS] / 100.0f);
+
         pInit(&posControl.pids.vel[axis], (float)pidProfile->I8[PIDPOS] / 100.0f);
 
-        pidInit(&posControl.pids.acc[axis], (float)pidProfile->P8[PIDPOSR] / 10.0f,
-                                 (float)pidProfile->I8[PIDPOSR] / 100.0f,
-                                 (float)pidProfile->D8[PIDPOSR] / 1000.0f,
-                                 200.0);
+        pidInit(&posControl.pids.acc[axis], (float)pidProfile->P8[PIDPOSR] / 100.0f,
+                                            (float)pidProfile->I8[PIDPOSR] / 100.0f,
+                                            (float)pidProfile->D8[PIDPOSR] / 1000.0f,
+                                            200.0);
     }
 
     // Initialize altitude hold PID-controllers (pos_z, vel_z, acc_z
-    pInit(&posControl.pids.pos[Z], (float)pidProfile->P8[PIDALT] / 10.0f);
-    pInit(&posControl.pids.vel[Z], (float)pidProfile->I8[PIDALT] / 10.0f);
-    pidInit(&posControl.pids.acc[Z], (float)pidProfile->P8[PIDVEL] / 10.0f,
-                          (float)pidProfile->I8[PIDVEL] / 100.0f,       // FIXME: This should be made consistent with Configurator
-                          (float)pidProfile->D8[PIDVEL] / 1000.0f,
-                          300.0);
+    pInit(&posControl.pids.pos[Z], (float)pidProfile->P8[PIDALT] / 100.0f);
+
+    pInit(&posControl.pids.vel[Z], (float)pidProfile->I8[PIDALT] / 100.0f);
+
+    pidInit(&posControl.pids.acc[Z], (float)pidProfile->P8[PIDVEL] / 100.0f,
+                                     (float)pidProfile->I8[PIDVEL] / 100.0f,       // FIXME: This should be made consistent with Configurator
+                                     (float)pidProfile->D8[PIDVEL] / 1000.0f,
+                                     300.0);
 
 #if defined(NAV_HEADING_CONTROL_PID)
     // Heading PID (duplicates maghold)

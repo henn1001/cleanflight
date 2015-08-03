@@ -31,7 +31,7 @@
 #define RADX10                          0.00174532925f
 #define RADX100                         0.000174532925f
 #define CROSSTRACK_GAIN                 1
-#define NAV_ROLL_PITCH_MAX              300 // Max control input from NAV
+#define NAV_ROLL_PITCH_MAX              300 // Max control input from NAV (30 deg)
 #define NAV_THROTTLE_CORRECTION_ANGLE   450
 
 //Update rate for position target update (minumum possible speed in cms will be this value)
