@@ -216,3 +216,52 @@ static void cltFilterUpdateFromBaro(int32_t alt, float vel)
     cltState.baro.vel.value = vel;
 }
 
+
+
+
+
+typedef struct {
+    unsigned gps_origin_valid : 1;
+} navigationStateEstimationFlags_t;
+
+#define NAV_MAX_VARIANCE        (1e+6f)
+
+typedef struct {
+    // Origins
+    navigationStateEstimationFlags_t    flags;
+    navLocation_t                       gps_origin;     // GPS origin (LLH coordinates)
+
+    t_fp_vector     vel;                // Estimated velocity
+    t_fp_vector     vel_variance;       // Estimated velocity variance (for CLT fusion)
+    
+    t_fp_vector     pos;                // Estimated position
+    t_fp_vector     pos_variance;       // Estimated position variance (for CLT fusion)
+} navigationStateEstimation_t;
+
+
+/*-----------------------------------------------------------
+ * EXPERIMENTAL STATE ESTIMATION
+ *-----------------------------------------------------------*/
+static navigationStateEstimation_t  navState;
+
+void navInitStateEstimation(void)
+{
+    navState.flags.gps_origin_valid = 0;
+
+    navState.vel.V.X = 0.0f;
+    navState.vel.V.Y = 0.0f;
+    navState.vel.V.Z = 0.0f;
+
+    navState.vel_variance.V.X = NAV_MAX_VARIANCE;
+    navState.vel_variance.V.Y = NAV_MAX_VARIANCE;
+    navState.vel_variance.V.Z = NAV_MAX_VARIANCE;
+
+    navState.pos.V.X = 0.0f;
+    navState.pos.V.Y = 0.0f;
+    navState.pos.V.Z = 0.0f;
+
+    navState.pos_variance.V.X = NAV_MAX_VARIANCE;
+    navState.pos_variance.V.Y = NAV_MAX_VARIANCE;
+    navState.pos_variance.V.Z = NAV_MAX_VARIANCE;
+}
+

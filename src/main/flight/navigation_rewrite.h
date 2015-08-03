@@ -76,6 +76,13 @@ typedef struct navProfile_s {
     float    nav_gps_cf;                    // GPS INS The LOWER the value the closer to gps speed // Dont go to high here
 } navProfile_t;
 
+// LLH Location in NEU axis system
+typedef struct navLocation_s {
+    int32_t alt;    // Altitude in centimeters (meters * 100)
+    int32_t lat;    // Lattitude * 1e+7
+    int32_t lon;    // Longitude * 1e+7
+} navLocation_t;
+
 // Define a position in 3D space (coordinates are in GPS points)
 typedef struct navPosition3D_s {
     int32_t altitude;

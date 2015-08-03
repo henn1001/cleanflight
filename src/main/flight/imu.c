@@ -123,7 +123,7 @@ float calculateThrottleAngleScale(uint16_t throttle_correction_angle)
 t_fp_vector EstG;
 
 #define MAX_REF_VEL_UPDATE_INTERVAL     1000000     // 1s = 1Hz
-#define REF_VEL_DECAY_FACTOR            0.995f
+#define REF_VEL_DECAY_FACTOR            0.998f
 void imuUpdateAccelerationAndVelocity(uint8_t axis, float accValue, uint32_t deltaT)
 {
     float accDt = deltaT * 1e-6f;
