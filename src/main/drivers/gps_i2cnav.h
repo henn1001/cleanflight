@@ -16,14 +16,8 @@
  */
 
 #pragma once
-#include "sensors/battery.h"
 
-// Maximum sonar range we expect to be a valid reading
-#define SONAR_MAX_RANGE     300
+#include "gps.h"
 
-void sonarUpdate(void);
-
-int32_t sonarRead(void);
-int32_t sonarCalculateAltitude(int32_t sonarAlt, int16_t tiltAngle);
-int32_t sonarGetLatestAltitude(void);
-
+bool i2cnavGPSModuleDetect(void);
+void i2cnavGPSModuleRead(gpsDataGeneric_t * gpsMsg);

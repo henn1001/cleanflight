@@ -35,6 +35,10 @@
 #include "drivers/serial_uart.h"
 #include "drivers/gpio.h"
 #include "drivers/light_led.h"
+#include "drivers/sensor.h"
+
+#include "drivers/gps.h"
+#include "drivers/gps_i2cnav.h"
 
 #include "sensors/sensors.h"
 
@@ -44,7 +48,7 @@
 
 #include "flight/gps_conversion.h"
 #include "flight/pid.h"
-#include "flight/navigation.h"
+#include "flight/navigation_rewrite.h"
 
 #include "config/config.h"
 #include "config/runtime_config.h"
@@ -191,7 +195,7 @@ static void shiftPacketLog(void)
     }
 }
 
-static void gpsNewData(uint16_t c);
+static void gpsNewDataSerial(uint16_t c);
 static bool gpsNewFrameNMEA(char c);
 static bool gpsNewFrameUBLOX(uint8_t data);
 
@@ -201,12 +205,16 @@ static void gpsSetState(gpsState_e state)
     gpsData.state_position = 0;
     gpsData.state_ts = millis();
     gpsData.messageState = GPS_MESSAGE_STATE_IDLE;
+
+    if (state != GPS_RECEIVING_DATA)
+        gpsData.validData = GPS_VALID_NONE;
 }
+
+bool gpsDetectI2C(void);
 
 void gpsInit(serialConfig_t *initialSerialConfig, gpsConfig_t *initialGpsConfig)
 {
     serialConfig = initialSerialConfig;
-
 
     gpsData.baudrateIndex = 0;
     gpsData.errors = 0;
@@ -216,35 +224,57 @@ void gpsInit(serialConfig_t *initialSerialConfig, gpsConfig_t *initialGpsConfig)
 
     gpsConfig = initialGpsConfig;
 
+    // Clear satellites in view information, if we use I2C driver this is not used
+    GPS_numCh = 0;
+    for (int i = 0; i < GPS_SV_MAXSATS; i++){
+        GPS_svinfo_chn[i] = 0;
+        GPS_svinfo_svid[i] = 0;
+        GPS_svinfo_quality[i] = 0;
+        GPS_svinfo_cno[i] = 0;
+    }
+
     // init gpsData structure. if we're not actually enabled, don't bother doing anything else
     gpsSetState(GPS_UNKNOWN);
 
     gpsData.lastMessage = millis();
 
-    serialPortConfig_t *gpsPortConfig = findSerialPortConfig(FUNCTION_GPS);
-    if (!gpsPortConfig) {
-        featureClear(FEATURE_GPS);
-        return;
-    }
+    if (gpsConfig->provider == GPS_NMEA || gpsConfig->provider == GPS_UBLOX) {
+        serialPortConfig_t *gpsPortConfig = findSerialPortConfig(FUNCTION_GPS);
+        if (!gpsPortConfig) {
+            // No port configured for SERIAL GPS - automatically fallback to I2C GPS if it is present
+            if (gpsDetectI2C()) {
+                gpsConfig->provider = GPS_I2C;
+            }
+            else {
+                featureClear(FEATURE_GPS);
+                return;
+            }
+        }
+        else {
+            while (gpsInitData[gpsData.baudrateIndex].baudrateIndex != gpsPortConfig->gps_baudrateIndex) {
+                gpsData.baudrateIndex++;
+                if (gpsData.baudrateIndex >= GPS_INIT_DATA_ENTRY_COUNT) {
+                    gpsData.baudrateIndex = DEFAULT_BAUD_RATE_INDEX;
+                    break;
+                }
+            }
 
-    while (gpsInitData[gpsData.baudrateIndex].baudrateIndex != gpsPortConfig->gps_baudrateIndex) {
-        gpsData.baudrateIndex++;
-        if (gpsData.baudrateIndex >= GPS_INIT_DATA_ENTRY_COUNT) {
-            gpsData.baudrateIndex = DEFAULT_BAUD_RATE_INDEX;
-            break;
+            portMode_t mode = MODE_RXTX;
+            // only RX is needed for NMEA-style GPS
+            if (gpsConfig->provider == GPS_NMEA)
+                mode &= ~MODE_TX;
+
+            // no callback - buffer will be consumed in gpsThread()
+            gpsPort = openSerialPort(gpsPortConfig->identifier, FUNCTION_GPS, NULL, gpsInitData[gpsData.baudrateIndex].baudrateIndex, mode, SERIAL_NOT_INVERTED);
+            if (!gpsPort) {
+                featureClear(FEATURE_GPS);
+                return;
+            }
         }
     }
 
-    portMode_t mode = MODE_RXTX;
-    // only RX is needed for NMEA-style GPS
-    if (gpsConfig->provider == GPS_NMEA)
-        mode &= ~MODE_TX;
-
-    // no callback - buffer will be consumed in gpsThread()
-    gpsPort = openSerialPort(gpsPortConfig->identifier, FUNCTION_GPS, NULL, gpsInitData[gpsData.baudrateIndex].baudrateIndex, mode, SERIAL_NOT_INVERTED);
-    if (!gpsPort) {
-        featureClear(FEATURE_GPS);
-        return;
+    if (gpsConfig->provider == GPS_I2C) {
+        // Nothing to do yet
     }
 
     // signal GPS "thread" to initialize when it gets to it
@@ -270,7 +300,6 @@ void gpsInitUblox(void)
     // Wait until GPS transmit buffer is empty
     if (!isSerialTransmitBufferEmpty(gpsPort))
         return;
-
 
     switch (gpsData.state) {
         case GPS_INITIALIZING:
@@ -343,6 +372,98 @@ void gpsInitUblox(void)
     }
 }
 
+#define GPS_I2C_POLL_RATE_HZ    20  // Poll I2C GPS at this rate
+static gpsReadFuncPtr gpsReadNewDataI2CDriver = NULL;
+
+bool gpsDetectI2C(void)
+{
+    // Older Atmega328p based I2C NAV boards (also PARIS I2C NAV module)
+    if (i2cnavGPSModuleDetect()) {
+        gpsReadNewDataI2CDriver = &i2cnavGPSModuleRead;
+        return true;
+    }
+
+    gpsReadNewDataI2CDriver  = NULL;
+    return false;
+}
+
+void gpsInitI2C(void)
+{
+    switch(gpsData.state) {
+        case GPS_INITIALIZING:
+        case GPS_CHANGE_BAUD:
+        case GPS_CONFIGURE:
+            if (gpsDetectI2C()) {
+                gpsSetState(GPS_RECEIVING_DATA);
+            }
+            else {
+                gpsSetState(GPS_INITIALIZING);
+            }
+            break;
+    }
+}
+
+void gpsReadNewDataI2C(void)
+{
+    static gpsDataGeneric_t gpsMsg;
+
+    // Check for poll rate timeout
+    if ((millis() - gpsData.lastMessage) < (1000 / GPS_I2C_POLL_RATE_HZ)) 
+        return;
+
+    // Query driver for new data
+    if (gpsReadNewDataI2CDriver) {
+        gpsReadNewDataI2CDriver(&gpsMsg);
+
+        if (gpsMsg.flags.gpsOk) {
+            // Fix data
+            if (gpsMsg.flags.fix3D)
+                ENABLE_STATE(GPS_FIX);
+            else
+                DISABLE_STATE(GPS_FIX);
+
+            // sat count
+            GPS_numSat = gpsMsg.numSat;
+
+            // Other data
+            if (gpsMsg.flags.newData) {
+                if (gpsMsg.flags.fix3D) {
+                    GPS_hdop = gpsMsg.hdop;
+                    GPS_altitude = gpsMsg.altitude;
+                    GPS_speed = gpsMsg.speed;
+                    GPS_ground_course = gpsMsg.ground_course;
+                    GPS_coord[LAT] = gpsMsg.latitude;
+                    GPS_coord[LON] = gpsMsg.longitude;
+                }
+                else {
+                }
+
+                // FIXME: Detect what data is actually valid
+                gpsData.validData = GPS_VALID_COORDINATES | GPS_VALID_ALTITUDE | GPS_VALID_SPEED | GPS_VALID_COURSE | GPS_VALID_HDOP;
+
+                GPS_packetCount++;
+
+                if (GPS_update == 1)
+                    GPS_update = 0;
+                else
+                    GPS_update = 1;
+
+                // new data received and parsed, we're in business
+                gpsData.lastLastMessage = gpsData.lastMessage;
+                gpsData.lastMessage = millis();
+
+                onNewGPSData(GPS_coord[LAT], GPS_coord[LON], GPS_altitude);
+            }
+
+            sensorsSet(SENSOR_GPS);
+        }
+    }
+    else {
+        sensorsClear(SENSOR_GPS);
+        gpsSetState(GPS_LOST_COMMUNICATION);
+    }
+}
+
 void gpsInitHardware(void)
 {
     switch (gpsConfig->provider) {
@@ -353,16 +474,29 @@ void gpsInitHardware(void)
         case GPS_UBLOX:
             gpsInitUblox();
             break;
+
+        case GPS_I2C:
+            gpsInitI2C();
+            break;
+    }
+}
+
+void gpsReadNewData(void)
+{
+    if (gpsConfig->provider == GPS_NMEA || gpsConfig->provider == GPS_UBLOX) {
+        if (gpsPort) {
+            while (serialTotalBytesWaiting(gpsPort))
+                gpsNewDataSerial(serialRead(gpsPort));
+        }
+    }
+    else if (gpsConfig->provider == GPS_I2C) {
+        gpsReadNewDataI2C();
     }
 }
 
 void gpsThread(void)
 {
-    // read out available GPS bytes
-    if (gpsPort) {
-        while (serialTotalBytesWaiting(gpsPort))
-            gpsNewData(serialRead(gpsPort));
-    }
+    gpsReadNewData();
 
     switch (gpsData.state) {
         case GPS_UNKNOWN:
@@ -376,11 +510,13 @@ void gpsThread(void)
 
         case GPS_LOST_COMMUNICATION:
             gpsData.timeouts++;
-            if (gpsConfig->autoBaud) {
-                // try another rate
+
+            // try another rate for serial GPS
+            if ((gpsConfig->provider == GPS_NMEA || gpsConfig->provider == GPS_UBLOX) && gpsConfig->autoBaud) {
                 gpsData.baudrateIndex++;
                 gpsData.baudrateIndex %= GPS_INIT_ENTRIES;
             }
+
             gpsData.lastMessage = millis();
             // TODO - move some / all of these into gpsData
             GPS_numSat = 0;
@@ -399,9 +535,9 @@ void gpsThread(void)
     }
 }
 
-static void gpsNewData(uint16_t c)
+static void gpsNewDataSerial(uint16_t c)
 {
-    if (!gpsNewFrame(c)) {
+    if (!gpsNewFrameFromSerial(c)) {
         return;
     }
 
@@ -419,16 +555,18 @@ static void gpsNewData(uint16_t c)
     debug[3] = GPS_update;
 #endif
 
-    onGpsNewData();
+    onNewGPSData(GPS_coord[LAT], GPS_coord[LON], GPS_altitude);
 }
 
-bool gpsNewFrame(uint8_t c)
+bool gpsNewFrameFromSerial(uint8_t c)
 {
     switch (gpsConfig->provider) {
         case GPS_NMEA:          // NMEA
             return gpsNewFrameNMEA(c);
         case GPS_UBLOX:         // UBX binary
             return gpsNewFrameUBLOX(c);
+        case GPS_I2C:           // Shouldn't happen
+            return false;
     }
 
     return false;
@@ -673,12 +811,14 @@ static bool gpsNewFrameNMEA(char c)
                             GPS_coord[LON] = gps_Msg.longitude;
                             GPS_numSat = gps_Msg.numSat;
                             GPS_altitude = gps_Msg.altitude;
+                            gpsData.validData = gpsData.validData | GPS_VALID_COORDINATES | GPS_VALID_ALTITUDE;
                         }
                         break;
                     case FRAME_RMC:
                         *gpsPacketLogChar = LOG_NMEA_RMC;
                         GPS_speed = gps_Msg.speed;
                         GPS_ground_course = gps_Msg.ground_course;
+                        gpsData.validData = gpsData.validData | GPS_VALID_SPEED | GPS_VALID_COURSE;
                         break;
                     } // end switch
                 } else {
@@ -883,6 +1023,7 @@ static bool UBLOX_parse_gps(void)
         } else {
             DISABLE_STATE(GPS_FIX);
         }
+        gpsData.validData = gpsData.validData | GPS_VALID_COORDINATES | GPS_VALID_ALTITUDE;
         _new_position = true;
         break;
     case MSG_STATUS:
@@ -898,12 +1039,14 @@ static bool UBLOX_parse_gps(void)
             DISABLE_STATE(GPS_FIX);
         GPS_numSat = _buffer.solution.satellites;
         GPS_hdop = _buffer.solution.position_DOP;
+        gpsData.validData = gpsData.validData | GPS_VALID_HDOP;
         break;
     case MSG_VELNED:
         *gpsPacketLogChar = LOG_UBLOX_VELNED;
         // speed_3d                        = _buffer.velned.speed_3d;  // cm/s
         GPS_speed = _buffer.velned.speed_2d;    // cm/s
         GPS_ground_course = (uint16_t) (_buffer.velned.heading_2d / 10000);     // Heading 2D deg * 100000 rescaled to deg * 10
+        gpsData.validData = gpsData.validData | GPS_VALID_SPEED | GPS_VALID_COURSE;
         _new_speed = true;
         break;
     case MSG_SVINFO:
@@ -1039,7 +1182,7 @@ void gpsEnablePassthrough(serialPort_t *gpsPassthroughPort)
         if (serialTotalBytesWaiting(gpsPort)) {
             LED0_ON;
             c = serialRead(gpsPort);
-            gpsNewData(c);
+            gpsNewDataSerial(c);
             serialWrite(gpsPassthroughPort, c);
             LED0_OFF;
         }

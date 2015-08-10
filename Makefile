@@ -223,7 +223,6 @@ COMMON_SRC	 = build_config.c \
 		   common/encoding.c \
 		   main.c \
 		   mw.c \
-		   flight/altitudehold.c \
 		   flight/failsafe.c \
 		   flight/pid.c \
 		   flight/imu.c \
@@ -234,6 +233,7 @@ COMMON_SRC	 = build_config.c \
 		   drivers/serial.c \
 		   drivers/sound_beeper.c \
 		   drivers/system.c \
+           drivers/gps_i2cnav.c \
 		   io/beeper.c \
 		   io/rc_controls.c \
 		   io/rc_curves.c \
@@ -259,7 +259,8 @@ COMMON_SRC	 = build_config.c \
 		   $(DEVICE_STDPERIPH_SRC)
 
 HIGHEND_SRC  = flight/autotune.c \
-		   flight/navigation.c \
+           flight/navigation_rewrite.c \
+           flight/navigation_poscontrol.c \
 		   flight/gps_conversion.c \
 		   common/colorconversion.c \
 		   io/gps.c \
@@ -597,6 +598,7 @@ LDFLAGS		 = -lm \
 		   -static \
 		   -Wl,-gc-sections,-Map,$(TARGET_MAP) \
 		   -Wl,-L$(LINKER_DIR) \
+           -Wl,--cref \
 		   -T$(LD_SCRIPT)
 
 ###############################################################################

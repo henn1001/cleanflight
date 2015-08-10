@@ -15,18 +15,22 @@
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "io/escservo.h"
-#include "io/rc_controls.h"
-#include "flight/pid.h"
+#pragma once
 
-#include "sensors/barometer.h"
+typedef struct gpsDataGeneric_s {
+    struct {
+        unsigned gpsOk : 1;     // gps read successful
+        unsigned newData : 1;   // new gps data available (lat/lon/alt)
+        unsigned fix3D : 1;     // gps fix status
+    } flags;
+    int32_t latitude;
+    int32_t longitude;
+    uint8_t numSat;
+    uint16_t altitude;
+    uint16_t speed;
+    uint16_t ground_course;
+    uint16_t hdop;
+} gpsDataGeneric_t;
 
-extern int32_t AltHold;
-extern int32_t vario;
+typedef void (*gpsReadFuncPtr)(gpsDataGeneric_t * gpsMsg);                       // baro start operation
 
-void configureAltitudeHold(pidProfile_t *initialPidProfile, barometerConfig_t *intialBarometerConfig, rcControlsConfig_t *initialRcControlsConfig, escAndServoConfig_t *initialEscAndServoConfig);
-void applyAltHold(airplaneConfig_t *airplaneConfig);
-void updateAltHoldState(void);
-void updateSonarAltHoldState(void);
-
-int32_t altitudeHoldGetEstimatedAltitude(void);
