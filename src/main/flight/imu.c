@@ -50,7 +50,7 @@
 //#define DEBUG_IMU
 //#define DEBUG_IMU_SPEED
 
-#define MAX_ACC_PROCESSING   340  // Anti jitter equal acc processing each cycle
+#define MAX_ACC_PROCESSING   360  // Anti jitter equal acc processing each cycle
 #define MAX_GYRO_PROCESSING  100  // Anti jitter equal gyro processing each cycle
 
 int16_t accSmooth[XYZ_AXIS_COUNT];
