@@ -48,8 +48,8 @@ void gyroUpdateSampleRate(void) {
     int minLooptime;
 
 #ifdef CC3DF3
-    gyroSamplePeriod = 200; // gyro sampling rate 1khz
-    minLooptime = 200;      // Full 1khz sampling
+    gyroSamplePeriod = 250; // gyro sampling rate 1khz
+    minLooptime = 250;      // Full 1khz sampling
 #else
     gyroSamplePeriod = 1000; // gyro sampling rate 1khz
     minLooptime = 1000;      // Full 1khz sampling

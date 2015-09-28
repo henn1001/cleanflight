@@ -31,6 +31,7 @@
 
 void pwmBrushedMotorConfig(const timerHardware_t *timerHardware, uint8_t motorIndex, uint16_t motorPwmRate, uint16_t idlePulse);
 void pwmBrushlessMotorConfig(const timerHardware_t *timerHardware, uint8_t motorIndex, uint16_t motorPwmRate, uint16_t idlePulse);
+void fastPWMMotorConfig(const timerHardware_t *timerHardware, uint8_t motorIndex, uint16_t idlePulse);
 void pwmOneshotMotorConfig(const timerHardware_t *timerHardware, uint8_t motorIndex);
 void pwmServoConfig(const timerHardware_t *timerHardware, uint8_t servoIndex, uint16_t servoPwmRate, uint16_t servoCenterPulse);
 
@@ -666,7 +667,7 @@ pwmOutputConfiguration_t *pwmInit(drv_pwm_config_t *init)
             }
 #endif
 #ifdef CC3DF3
-            if (init->useOneshot || isMotorBrushed(init->motorPwmRate)) {
+            if (init->useOneshot || init->useFastPWM || isMotorBrushed(init->motorPwmRate)) {
                 ppmAvoidPWMTimerClash(timerHardwarePtr, TIM4);
             }
 #endif
@@ -677,7 +678,9 @@ pwmOutputConfiguration_t *pwmInit(drv_pwm_config_t *init)
         } else if (type == MAP_TO_MOTOR_OUTPUT) {
             if (init->useOneshot) {
                 pwmOneshotMotorConfig(timerHardwarePtr, pwmOutputConfiguration.motorCount);
-            } else if (isMotorBrushed(init->motorPwmRate)) {
+            } else if (init->useFastPWM) {
+                fastPWMMotorConfig(timerHardwarePtr, pwmOutputConfiguration.motorCount, init->idlePulse);
+            } else if (init->motorPwmRate > 500) {
                 pwmBrushedMotorConfig(timerHardwarePtr, pwmOutputConfiguration.motorCount, init->motorPwmRate, init->idlePulse);
             } else {
                 pwmBrushlessMotorConfig(timerHardwarePtr, pwmOutputConfiguration.motorCount, init->motorPwmRate, init->idlePulse);
