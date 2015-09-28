@@ -1,5 +1,4 @@
-/*
- * This file is part of Cleanflight.
+/* This file is part of Cleanflight.
  *
  * Cleanflight is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -155,17 +154,17 @@ const mpu6000Config_t *selectMPU6000Config(void)
 #endif
 
 #ifdef CC3DF3
-    /*static const mpu6000Config_t CC3DMPU6000Config = {
-            .gpioAPB2Peripherals = RCC_APB2Periph_GPIOA,
+    static const mpu6000Config_t CC3DMPU6000Config = {
+            .gpioAHBPeripherals = RCC_AHBPeriph_GPIOA,
             .gpioPort = GPIOA,
             .gpioPin = Pin_3,
-            .exti_port_source = GPIO_PortSourceGPIOA,
+            .exti_port_source = EXTI_PortSourceGPIOA,
             .exti_pin_source = GPIO_PinSource3,
             .exti_line = EXTI_Line3,
             .exti_irqn = EXTI3_IRQn
     };
-    return &CC3DMPU6000Config; */
-    return NULL;
+
+    return &CC3DMPU6000Config; 
 #endif
 
     return NULL;
