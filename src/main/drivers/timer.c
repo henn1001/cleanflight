@@ -313,13 +313,13 @@ const timerHardware_t timerHardware[USABLE_TIMER_CHANNEL_COUNT] = {
     { TIM3,  GPIOB, Pin_4,  TIM_Channel_1, TIM3_IRQn,               1, Mode_AF_PP,      GPIO_PinSource4,  GPIO_AF_2}, // S5 - PB4 - TIM3_CH1 - AF02
     { TIM2,  GPIOA, Pin_2,  TIM_Channel_3, TIM2_IRQn,               1, Mode_AF_PP,      GPIO_PinSource2,  GPIO_AF_1},  // S6 - PA2 - TIM2_CH3 - AF01
 
-    { TIM4,  GPIOB, Pin_6,  TIM_Channel_1, TIM4_IRQn,               0, Mode_AF_PP,      GPIO_PinSource6,  GPIO_AF_2}, // RC_CH6 - PB5  - *TIM3_CH2
+    { TIM8,  GPIOB, Pin_6,  TIM_Channel_1, TIM8_CC_IRQn,            0, Mode_AF_PP,      GPIO_PinSource6,  GPIO_AF_5}, // RC_CH6 - PB5  - *TIM3_CH2
 };
 
-#define USED_TIMERS  (TIM_N(1) | TIM_N(2) | TIM_N(3) | TIM_N(4))
+#define USED_TIMERS  (TIM_N(1) | TIM_N(2) | TIM_N(3) | TIM_N(4) | TIM_N(8))
 
 #define TIMER_APB1_PERIPHERALS (RCC_APB1Periph_TIM2 | RCC_APB1Periph_TIM3 | RCC_APB1Periph_TIM4)
-#define TIMER_APB2_PERIPHERALS (RCC_APB2Periph_TIM1)
+#define TIMER_APB2_PERIPHERALS (RCC_APB2Periph_TIM1 | RCC_APB2Periph_TIM8)
 #define TIMER_AHB_PERIPHERALS (RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB)
 
 #endif
@@ -473,6 +473,14 @@ void timerConfigure(const timerHardware_t *timerHardwarePtr, uint16_t period, ui
         timerNVICConfigure(TIM8_UP_IRQn);
         break;
 #endif
+#ifdef STM32F303xC
+    case TIM8_CC_IRQn:
+        timerNVICConfigure(TIM8_UP_IRQn);
+        break;
+#endif
+
+
+
     }
 }
 
