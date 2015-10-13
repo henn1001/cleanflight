@@ -2168,7 +2168,7 @@ static void cliVersion(char *cmdline)
 {
     UNUSED(cmdline);
 
-    printf("# BetaFlight Bee/%s %s %s / %s (%s)",
+    printf("# BetaFlight Final/%s %s %s / %s (%s)",
         targetName,
         FC_VERSION_STRING,
         buildDate,
@@ -2183,7 +2183,7 @@ void cliProcess(void)
         return;
     }
 
-    while (serialTotalBytesWaiting(cliPort)) {
+    while (serialRxBytesWaiting(cliPort)) {
         uint8_t c = serialRead(cliPort);
         if (c == '\t' || c == '?') {
             // do tab completion
