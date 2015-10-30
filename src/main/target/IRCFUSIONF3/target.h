@@ -17,7 +17,7 @@
 
 #pragma once
 
-#define TARGET_BOARD_IDENTIFIER "SRF3"
+#define TARGET_BOARD_IDENTIFIER "IFF3"
 
 #define LED0_GPIO   GPIOB
 #define LED0_PIN    Pin_3
@@ -49,7 +49,7 @@
 
 #define BARO
 #define USE_BARO_MS5611
-#define USE_BARO_BMP280
+#define USE_BARO_BMP085
 
 #define MAG
 #define USE_MAG_AK8975

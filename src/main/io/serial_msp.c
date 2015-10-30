@@ -142,10 +142,11 @@ void useRcControlsConfig(modeActivationCondition_t *modeActivationConditions, es
 
 #define MULTIWII_IDENTIFIER "MWII";
 #define CLEANFLIGHT_IDENTIFIER "CLFL"
+#define BETAFLIGHT_IDENTIFIER "BTFL"
 #define BASEFLIGHT_IDENTIFIER "BAFL";
 
 #define FLIGHT_CONTROLLER_IDENTIFIER_LENGTH 4
-static const char * const flightControllerIdentifier = CLEANFLIGHT_IDENTIFIER; // 4 UPPER CASE alpha numeric characters that identify the flight controller.
+static const char * const flightControllerIdentifier = BETAFLIGHT_IDENTIFIER; // 4 UPPER CASE alpha numeric characters that identify the flight controller.
 
 #define FLIGHT_CONTROLLER_VERSION_LENGTH    3
 #define FLIGHT_CONTROLLER_VERSION_MASK      0xFFF
@@ -897,9 +898,9 @@ static bool processOutCommand(uint8_t cmdMSP)
         break;
     case MSP_ATTITUDE:
         headSerialReply(6);
-        for (i = 0; i < 2; i++)
-            serialize16(inclination.raw[i]);
-        serialize16(heading);
+        serialize16(attitude.values.roll);
+        serialize16(attitude.values.pitch);
+        serialize16(DECIDEGREES_TO_DEGREES(attitude.values.yaw));
         break;
     case MSP_ALTITUDE:
         headSerialReply(6);
@@ -930,7 +931,7 @@ static bool processOutCommand(uint8_t cmdMSP)
         break;
     case MSP_ARMING_CONFIG:
         headSerialReply(2);
-        serialize8(masterConfig.auto_disarm_delay); 
+        serialize8(masterConfig.auto_disarm_delay);
         serialize8(masterConfig.disarm_kill_switch);
         break;
     case MSP_LOOP_TIME:
@@ -1361,7 +1362,7 @@ static bool processInCommand(void)
     case MSP_SET_LOOP_TIME:
         break;
     case MSP_SET_PID_CONTROLLER:
-        currentProfile->pidProfile.pidController = read8();
+        currentProfile->pidProfile.pidController = constrain(read8(), 1, 2);  // Temporary configurator compatibility
         pidSetController(currentProfile->pidProfile.pidController);
         break;
     case MSP_SET_PID:
@@ -1525,7 +1526,7 @@ static bool processInCommand(void)
         }
 #endif
         break;
-        
+
     case MSP_SET_SERVO_MIX_RULE:
 #ifdef USE_SERVOS
         i = read8();
@@ -1543,7 +1544,7 @@ static bool processInCommand(void)
         }
 #endif
         break;
-        
+
     case MSP_RESET_CONF:
         if (!ARMING_FLAG(ARMED)) {
             resetEEPROM();

@@ -186,6 +186,11 @@ static const rxFailsafeChannelMode_e rxFailsafeModesTable[RX_FAILSAFE_TYPE_COUNT
     { RX_FAILSAFE_MODE_INVALID, RX_FAILSAFE_MODE_HOLD, RX_FAILSAFE_MODE_SET }
 };
 
+// sync this with pidControllerType_e
+static const char * const pidControllers[] = {
+    "REWRITE", "LUXFLOAT", NULL
+};
+
 #ifndef CJMCU
 // sync this with sensors_e
 static const char * const sensorTypeNames[] = {
@@ -204,9 +209,10 @@ static const char * const sensorHardwareNames[4][11] = {
 
 typedef struct {
     const char *name;
+#ifndef SKIP_CLI_COMMAND_HELP
     const char *description;
     const char *args;
-
+#endif
     void (*func)(char *cmdline);
 } clicmd_t;
 
@@ -222,8 +228,6 @@ typedef struct {
 #define CLI_COMMAND_DEF(name, description, args, method) \
 { \
     name, \
-    NULL, \
-    NULL, \
     method \
 }
 #endif
@@ -409,11 +413,11 @@ const clivalue_t valueTable[] = {
     { "align_board_pitch",          VAR_INT16  | MASTER_VALUE,  &masterConfig.boardAlignment.pitchDegrees, -180, 360 },
     { "align_board_yaw",            VAR_INT16  | MASTER_VALUE,  &masterConfig.boardAlignment.yawDegrees, -180, 360 },
 
-    { "max_angle_inclination",      VAR_UINT16 | MASTER_VALUE,  &masterConfig.max_angle_inclination, 100, 900 },
+    { "max_angle_inclination",      VAR_UINT16 | MASTER_VALUE,  &masterConfig.max_angle_inclination, 100, 1200 },
 
     { "moron_threshold",            VAR_UINT8  | MASTER_VALUE,  &masterConfig.gyroConfig.gyroMovementCalibrationThreshold, 0, 128 },
-    { "gyro_cmpf_factor",           VAR_UINT16 | MASTER_VALUE,  &masterConfig.gyro_cmpf_factor, 100, 1000 },
-    { "gyro_cmpfm_factor",          VAR_UINT16 | MASTER_VALUE,  &masterConfig.gyro_cmpfm_factor, 100, 1000 },
+    { "imu_dcm_kp",                 VAR_UINT16 | MASTER_VALUE,  &masterConfig.dcm_kp, 0, 20000 },
+    { "imu_dcm_ki",                 VAR_UINT16 | MASTER_VALUE,  &masterConfig.dcm_ki, 0, 20000 },
 
     { "alt_hold_deadband",          VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].rcControlsConfig.alt_hold_deadband, 1, 250 },
     { "alt_hold_fast_change",       VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].rcControlsConfig.alt_hold_fast_change, 0, 1 },
@@ -425,7 +429,7 @@ const clivalue_t valueTable[] = {
 
     { "yaw_control_direction",      VAR_INT8   | MASTER_VALUE,  &masterConfig.yaw_control_direction, -1, 1 },
 
-    { "pid_at_min_throttle",        VAR_UINT8  | MASTER_VALUE, &masterConfig.mixerConfig.pid_at_min_throttle, 0, 1 },
+    { "pid_at_min_throttle",        VAR_UINT8  | MASTER_VALUE, &masterConfig.mixerConfig.pid_at_min_throttle, 0, 5 },
     { "yaw_motor_direction",        VAR_INT8   | MASTER_VALUE, &masterConfig.mixerConfig.yaw_motor_direction, -1, 1 },
     { "yaw_jump_prevention_limit",  VAR_UINT16 | MASTER_VALUE, &masterConfig.mixerConfig.yaw_jump_prevention_limit, YAW_JUMP_PREVENTION_LIMIT_LOW, YAW_JUMP_PREVENTION_LIMIT_HIGH },
 #ifdef USE_SERVOS
@@ -460,7 +464,7 @@ const clivalue_t valueTable[] = {
 #endif
 
     { "acc_hardware",               VAR_UINT8  | MASTER_VALUE,  &masterConfig.acc_hardware, 0, ACC_MAX },
-    { "acc_lpf_factor",             VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].acc_lpf_factor, 0, 250 },
+    { "acc_cut_hz",                 VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].acc_cut_hz, 0, 200 },
     { "accxy_deadband",             VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].accDeadband.xy, 0, 100 },
     { "accz_deadband",              VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].accDeadband.z, 0, 100 },
     { "accz_lpf_cutoff",            VAR_FLOAT  | PROFILE_VALUE, &masterConfig.profile[0].accz_lpf_cutoff, 1, 20 },
@@ -477,7 +481,7 @@ const clivalue_t valueTable[] = {
     { "mag_hardware",               VAR_UINT8  | MASTER_VALUE,  &masterConfig.mag_hardware, 0, MAG_MAX },
     { "mag_declination",            VAR_INT16  | PROFILE_VALUE, &masterConfig.profile[0].mag_declination, -18000, 18000 },
 
-    { "pid_controller",             VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.pidController, 0, 5 },
+    { "pid_controller",             VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.pidController, 1, 2 },
 
     { "p_pitch",                    VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.P8[PITCH], 0, 200 },
     { "i_pitch",                    VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.I8[PITCH], 0, 200 },
@@ -515,10 +519,7 @@ const clivalue_t valueTable[] = {
     { "i_vel",                      VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.I8[PIDVEL], 0, 200 },
     { "d_vel",                      VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.D8[PIDVEL], 0, 200 },
 
-    { "yaw_p_limit",                VAR_UINT16 | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.yaw_p_limit, YAW_P_LIMIT_MIN, YAW_P_LIMIT_MAX },
 	{ "dterm_cut_hz",               VAR_UINT8  | PROFILE_VALUE, &masterConfig.profile[0].pidProfile.dterm_cut_hz, 0, 200 },
-
-    { "pid5_oldyw",                 VAR_UINT8  | PROFILE_VALUE,  &masterConfig.profile[0].pidProfile.pid5_oldyw, 0, 1 },
 
 #ifdef GTUNE
     { "gtune_loP_rll",              VAR_UINT8  | PROFILE_VALUE,  &masterConfig.profile[0].pidProfile.gtune_lolimP[FD_ROLL], 10, 200 },
@@ -1410,7 +1411,13 @@ static void dumpValues(uint16_t mask)
         }
 
         printf("set %s = ", valueTable[i].name);
-        cliPrintVar(value, 0);
+
+        if (strstr(valueTable[i].name, "pid_controller")) {
+            cliPrint(pidControllers[*(uint8_t *)valueTable[i].ptr -1]);
+        } else {
+            cliPrintVar(value, 0);
+        }
+
         cliPrint("\r\n");
     }
 }
@@ -1710,12 +1717,14 @@ static void cliHelp(char *cmdline)
 
     for (i = 0; i < CMD_COUNT; i++) {
         cliPrint(cmdTable[i].name);
+#ifndef SKIP_CLI_COMMAND_HELP
         if (cmdTable[i].description) {
             printf(" - %s", cmdTable[i].description);
         }
         if (cmdTable[i].args) {
             printf("\r\n\t%s", cmdTable[i].args);
         }
+#endif
         cliPrint("\r\n");
     }
 }
@@ -2048,9 +2057,42 @@ static void cliSet(char *cmdline)
         valuef = fastA2F(eqptr);
         for (i = 0; i < VALUE_COUNT; i++) {
             val = &valueTable[i];
-            // ensure exact match when setting to prevent setting variables with shorter names
             if (strncasecmp(cmdline, valueTable[i].name, strlen(valueTable[i].name)) == 0 && variableNameLength == strlen(valueTable[i].name)) {
-                if (valuef >= valueTable[i].min && valuef <= valueTable[i].max) { // here we compare the float value since... it should work, RIGHT?
+                // ensure exact match when setting to prevent setting variables with shorter names
+                if (strstr(valueTable[i].name, "pid_controller")) {
+                    int_float_value_t tmp;
+                    tmp.int_value = 0;
+                    bool pidControllerSet = false;
+
+                    if (value) {
+                        if (value >= valueTable[i].min && value <= valueTable[i].max) {
+                        	tmp.int_value = value;
+                            cliSetVar(val, tmp);
+                            printf("%s set to %s \r\n", valueTable[i].name, pidControllers[value - 1]);
+                            pidControllerSet = true;
+                        }
+                    } else {
+                        for (int pid = 0; pid < (PID_COUNT - 1); pid++) {
+                            if (strstr(eqptr, pidControllers[pid])) {
+                                tmp.int_value = pid + 1;
+                                cliSetVar(val, tmp);
+                                printf("%s set to %s \r\n", valueTable[i].name, pidControllers[pid]);
+                                pidControllerSet = true;
+                            }
+                        }
+                    }
+
+                    if (!pidControllerSet) {
+                    	printf("Invalid Value! (Available PID Controllers: ");
+                    	for (int pid = 0; pid < (PID_COUNT - 1); pid++) {
+                    	    printf(pidControllers[pid]);
+                    	    printf(" ");
+                        }
+                        printf(")\r\n");
+                    }
+
+                    return;
+                } else if (valuef >= valueTable[i].min && valuef <= valueTable[i].max) { // here we compare the float value since... it should work, RIGHT?
                     int_float_value_t tmp;
                     if (valueTable[i].type & VAR_FLOAT)
                         tmp.float_value = valuef;
@@ -2072,6 +2114,7 @@ static void cliSet(char *cmdline)
     }
 }
 
+
 static void cliGet(char *cmdline)
 {
     uint32_t i;
@@ -2082,7 +2125,13 @@ static void cliGet(char *cmdline)
         if (strstr(valueTable[i].name, cmdline)) {
             val = &valueTable[i];
             printf("%s = ", valueTable[i].name);
-            cliPrintVar(val, 0);
+
+        	if (strstr(valueTable[i].name, "pid_controller")) {
+                cliPrint(pidControllers[*(uint8_t *)valueTable[i].ptr - 1]);
+        	} else {
+                cliPrintVar(val, 0);
+        	}
+
             cliPrint("\r\n");
 
             matchedCommands++;
@@ -2168,7 +2217,7 @@ static void cliVersion(char *cmdline)
 {
     UNUSED(cmdline);
 
-    printf("# BetaFlight Final/%s %s %s / %s (%s)",
+    printf("# BetaFlight/%s %s %s / %s (%s)",
         targetName,
         FC_VERSION_STRING,
         buildDate,
