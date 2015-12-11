@@ -31,6 +31,7 @@
 #define BEEP_GPIO GPIOA
 #define BEEP_PIN Pin_15 // PA15 (Beeper)
 #define BEEP_PERIPHERAL RCC_APB2Periph_GPIOA
+#define BEEPER_INVERTED
 
 #define MPU6000_CS_GPIO       GPIOA
 #define MPU6000_CS_PIN        GPIO_Pin_4
@@ -112,7 +113,7 @@
 #define RSSI_ADC_GPIO_PIN           GPIO_Pin_1
 #define RSSI_ADC_CHANNEL            ADC_Channel_1
 
-#define GPS
+//#define GPS
 #define LED_STRIP
 #define LED_STRIP_TIMER TIM3
 
@@ -122,6 +123,7 @@
 #define SONAR
 #define USE_SERVOS
 #define USE_CLI
+#define GTUNE
 
 #define USE_SERIAL_1WIRE
 
