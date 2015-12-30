@@ -23,9 +23,8 @@
 #define LED0_PIN    Pin_3
 #define LED0_PERIPHERAL RCC_AHBPeriph_GPIOB
 
-
-#define EXTI15_10_CALLBACK_HANDLER_COUNT 1 // MPU data ready
-#define USE_MPU_DATA_READY_SIGNAL
+//define DEBUG_MPU_DATA_READY_INTERRUPT
+//define USE_MPU_DATA_READY_SIGNAL
 
 #define MPU6000_CS_GPIO_CLK_PERIPHERAL   RCC_AHBPeriph_GPIOA
 #define MPU6000_CS_GPIO                  GPIOA
@@ -77,8 +76,9 @@
 
 #define LED0
 
+#define USE_VCP
 #define USE_USART1
-#define SERIAL_PORT_COUNT 1
+#define SERIAL_PORT_COUNT 2
 
 #ifndef UART1_GPIO
 #define UART1_TX_PIN        GPIO_Pin_9  // PA9
