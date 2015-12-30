@@ -1,7 +1,7 @@
 ALL_TARGETS := naze
 ALL_TARGETS += cc3d
 ALL_TARGETS += cc3d_opbl
-ALL_TARGETS += ccrdf3
+ALL_TARGETS += cc3df3
 ALL_TARGETS += nazepro
 ALL_TARGETS += olimexino
 ALL_TARGETS += stm32f3discovery
