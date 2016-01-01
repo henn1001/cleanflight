@@ -207,6 +207,9 @@ TARGET_FLAGS := $(TARGET_FLAGS) -DNAZE -DALIENWII32
 TARGET_DIR = $(ROOT)/src/main/target/NAZE
 endif
 
+
+
+
 INCLUDE_DIRS := $(INCLUDE_DIRS) \
 		    $(TARGET_DIR)
 
@@ -292,176 +295,6 @@ VCP_SRC = \
 		   vcp/usb_pwr.c \
 		   drivers/serial_usb_vcp.c
 
-NAZE_SRC = startup_stm32f10x_md_gcc.S \
-		   drivers/accgyro_adxl345.c \
-		   drivers/accgyro_bma280.c \
-		   drivers/accgyro_l3g4200d.c \
-		   drivers/accgyro_mma845x.c \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu3050.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/accgyro_mpu6500.c \
-		   drivers/accgyro_spi_mpu6500.c \
-		   drivers/adc.c \
-		   drivers/adc_stm32f10x.c \
-		   drivers/barometer_bmp085.c \
-		   drivers/barometer_ms5611.c \
-		   drivers/barometer_bmp280.c \
-		   drivers/bus_spi.c \
-		   drivers/bus_i2c_stm32f10x.c \
-		   drivers/compass_hmc5883l.c \
-		   drivers/display_ug2864hsweg01.h \
-		   drivers/flash_m25p16.c \
-		   drivers/gpio_stm32f10x.c \
-		   drivers/inverter.c \
-		   drivers/light_led_stm32f10x.c \
-		   drivers/light_ws2811strip.c \
-		   drivers/light_ws2811strip_stm32f10x.c \
-		   drivers/sonar_hcsr04.c \
-		   drivers/pwm_mapping.c \
-		   drivers/pwm_output.c \
-		   drivers/pwm_rx.c \
-		   drivers/serial_softserial.c \
-		   drivers/serial_uart.c \
-		   drivers/serial_uart_stm32f10x.c \
-		   drivers/sound_beeper_stm32f10x.c \
-		   drivers/system_stm32f10x.c \
-		   drivers/timer.c \
-		   drivers/timer_stm32f10x.c \
-		   io/flashfs.c \
-		   hardware_revision.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC)
-
-ALIENWIIF1_SRC = $(NAZE_SRC)
-
-EUSTM32F103RC_SRC = startup_stm32f10x_hd_gcc.S \
-		   drivers/accgyro_adxl345.c \
-		   drivers/accgyro_bma280.c \
-		   drivers/accgyro_l3g4200d.c \
-		   drivers/accgyro_mma845x.c \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu3050.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/accgyro_spi_mpu6000.c \
-		   drivers/accgyro_spi_mpu6500.c \
-		   drivers/adc.c \
-		   drivers/adc_stm32f10x.c \
-		   drivers/barometer_bmp085.c \
-		   drivers/barometer_ms5611.c \
-		   drivers/bus_i2c_stm32f10x.c \
-		   drivers/bus_spi.c \
-		   drivers/compass_ak8975.c \
-		   drivers/compass_hmc5883l.c \
-		   drivers/display_ug2864hsweg01.c \
-		   drivers/flash_m25p16.c \
-		   drivers/gpio_stm32f10x.c \
-		   drivers/inverter.c \
-		   drivers/light_led_stm32f10x.c \
-		   drivers/light_ws2811strip.c \
-		   drivers/light_ws2811strip_stm32f10x.c \
-		   drivers/pwm_mapping.c \
-		   drivers/pwm_output.c \
-		   drivers/pwm_rx.c \
-		   drivers/serial_softserial.c \
-		   drivers/serial_uart.c \
-		   drivers/serial_uart_stm32f10x.c \
-		   drivers/sonar_hcsr04.c \
-		   drivers/sound_beeper_stm32f10x.c \
-		   drivers/system_stm32f10x.c \
-		   drivers/timer.c \
-		   drivers/timer_stm32f10x.c \
-		   io/flashfs.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC)
-
-PORT103R_SRC = $(EUSTM32F103RC_SRC)
-
-OLIMEXINO_SRC = startup_stm32f10x_md_gcc.S \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/adc.c \
-		   drivers/adc_stm32f10x.c \
-		   drivers/barometer_bmp085.c \
-		   drivers/bus_i2c_stm32f10x.c \
-		   drivers/bus_spi.c \
-		   drivers/compass_hmc5883l.c \
-		   drivers/gpio_stm32f10x.c \
-		   drivers/light_led_stm32f10x.c \
-		   drivers/light_ws2811strip.c \
-		   drivers/light_ws2811strip_stm32f10x.c \
-		   drivers/pwm_mapping.c \
-		   drivers/pwm_output.c \
-		   drivers/pwm_rx.c \
-		   drivers/serial_softserial.c \
-		   drivers/serial_uart.c \
-		   drivers/serial_uart_stm32f10x.c \
-		   drivers/sonar_hcsr04.c \
-		   drivers/sound_beeper_stm32f10x.c \
-		   drivers/system_stm32f10x.c \
-		   drivers/timer.c \
-		   drivers/timer_stm32f10x.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC)
-
-CJMCU_SRC = \
-		   startup_stm32f10x_md_gcc.S \
-		   drivers/adc.c \
-		   drivers/adc_stm32f10x.c \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/bus_i2c_stm32f10x.c \
-		   drivers/compass_hmc5883l.c \
-		   drivers/gpio_stm32f10x.c \
-		   drivers/light_led_stm32f10x.c \
-		   drivers/pwm_mapping.c \
-		   drivers/pwm_output.c \
-		   drivers/pwm_rx.c \
-		   drivers/serial_uart.c \
-		   drivers/serial_uart_stm32f10x.c \
-		   drivers/sound_beeper_stm32f10x.c \
-		   drivers/system_stm32f10x.c \
-		   drivers/timer.c \
-		   drivers/timer_stm32f10x.c \
-		   hardware_revision.c \
-		   flight/gtune.c \
-		   blackbox/blackbox.c \
-		   blackbox/blackbox_io.c \
-		   $(COMMON_SRC)
-
-CC3D_SRC = \
-		   startup_stm32f10x_md_gcc.S \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_spi_mpu6000.c \
-		   drivers/adc.c \
-		   drivers/adc_stm32f10x.c \
-		   drivers/barometer_bmp085.c \
-		   drivers/barometer_ms5611.c \
-		   drivers/bus_spi.c \
-		   drivers/bus_i2c_stm32f10x.c \
-		   drivers/compass_hmc5883l.c \
-		   drivers/display_ug2864hsweg01.c \
-		   drivers/flash_m25p16.c \
-		   drivers/gpio_stm32f10x.c \
-		   drivers/inverter.c \
-		   drivers/light_led_stm32f10x.c \
-		   drivers/light_ws2811strip.c \
-		   drivers/light_ws2811strip_stm32f10x.c \
-		   drivers/pwm_mapping.c \
-		   drivers/pwm_output.c \
-		   drivers/pwm_rx.c \
-		   drivers/serial_softserial.c \
-		   drivers/serial_uart.c \
-		   drivers/serial_uart_stm32f10x.c \
-		   drivers/sonar_hcsr04.c \
-		   drivers/sound_beeper_stm32f10x.c \
-		   drivers/system_stm32f10x.c \
-		   drivers/timer.c \
-		   drivers/timer_stm32f10x.c \
-		   io/flashfs.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC) \
-		   $(VCP_SRC)
 
 STM32F30x_COMMON_SRC = \
 		   startup_stm32f30x_md_gcc.S \
@@ -483,12 +316,6 @@ STM32F30x_COMMON_SRC = \
 		   drivers/timer.c \
 		   drivers/timer_stm32f30x.c
 
-NAZE32PRO_SRC = \
-		   $(STM32F30x_COMMON_SRC) \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC) \
-		   $(VCP_SRC)
-
 STM32F3DISCOVERY_COMMON_SRC = \
 		   $(STM32F30x_COMMON_SRC) \
 		   drivers/accgyro_l3gd20.c \
@@ -497,97 +324,23 @@ STM32F3DISCOVERY_COMMON_SRC = \
 		   drivers/compass_hmc5883l.c \
 		   $(VCP_SRC)
 
-STM32F3DISCOVERY_SRC = \
-		   $(STM32F3DISCOVERY_COMMON_SRC) \
-		   drivers/accgyro_adxl345.c \
-		   drivers/accgyro_bma280.c \
-		   drivers/accgyro_mma845x.c \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu3050.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/accgyro_l3g4200d.c \
-		   drivers/barometer_ms5611.c \
-		   drivers/compass_ak8975.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC)
+include $(ROOT)/src/main/target/CC3D/board.mk
+include $(ROOT)/src/main/target/NAZE/board.mk
+ALIENWIIF1_SRC = $(NAZE_SRC)
+include $(ROOT)/src/main/target/EUSTM32F103RC/board.mk
+include $(ROOT)/src/main/target/PORT103R/board.mk
+include $(ROOT)/src/main/target/OLIMEXINO/board.mk
+include $(ROOT)/src/main/target/CJMCU/board.mk
+include $(ROOT)/src/main/target/NAZE32PRO/board.mk
+include $(ROOT)/src/main/target/STM32F3DISCOVERY/board.mk
+include $(ROOT)/src/main/target/CHEBUZZF3/board.mk
+include $(ROOT)/src/main/target/COLIBRI_RACE/board.mk
+include $(ROOT)/src/main/target/SPARKY/board.mk
+include $(ROOT)/src/main/target/ALIENWIIF3/board.mk
+include $(ROOT)/src/main/target/RMDO/board.mk
+include $(ROOT)/src/main/target/SPRACINGF3/board.mk
+include $(ROOT)/src/main/target/MOTOLAB/board.mk
 
-CHEBUZZF3_SRC = \
-		   $(STM32F3DISCOVERY_SRC) \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC)
-
-COLIBRI_RACE_SRC = \
-		   $(STM32F30x_COMMON_SRC) \
-		   drivers/display_ug2864hsweg01.c \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu6500.c \
-		   drivers/accgyro_spi_mpu6500.c \
-		   drivers/accgyro_mpu6500.c \
-		   drivers/barometer_ms5611.c \
-		   drivers/compass_ak8975.c \
-		   drivers/compass_hmc5883l.c \
-		   drivers/serial_usb_vcp.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC) \
-		   $(VCP_SRC)
-
-SPARKY_SRC = \
-		   $(STM32F30x_COMMON_SRC) \
-		   drivers/display_ug2864hsweg01.c \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/barometer_ms5611.c \
-		   drivers/compass_ak8975.c \
-		   drivers/serial_usb_vcp.c \
-		   drivers/sonar_hcsr04.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC) \
-		   $(VCP_SRC)
-
-ALIENWIIF3_SRC = \
-		   $(SPARKY_SRC)
-
-RMDO_SRC = \
-		   $(STM32F30x_COMMON_SRC) \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/barometer_bmp280.c \
-		   drivers/display_ug2864hsweg01.h \
-		   drivers/flash_m25p16.c \
-		   drivers/serial_softserial.c \
-		   drivers/sonar_hcsr04.c \
-		   io/flashfs.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC)
-
-SPRACINGF3_SRC = \
-		   $(STM32F30x_COMMON_SRC) \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/barometer_ms5611.c \
-		   drivers/compass_ak8975.c \
-		   drivers/compass_hmc5883l.c \
-		   drivers/display_ug2864hsweg01.h \
-		   drivers/flash_m25p16.c \
-		   drivers/serial_softserial.c \
-		   drivers/sonar_hcsr04.c \
-		   io/flashfs.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC)
-
-MOTOLAB_SRC = \
-		   $(STM32F30x_COMMON_SRC) \
-		   drivers/accgyro_mpu.c \
-		   drivers/accgyro_mpu6050.c \
-		   drivers/barometer_ms5611.c \
-		   drivers/compass_hmc5883l.c \
-		   drivers/display_ug2864hsweg01.c \
-		   drivers/serial_usb_vcp.c \
-		   drivers/flash_m25p16.c \
-		   io/flashfs.c \
-		   $(HIGHEND_SRC) \
-		   $(COMMON_SRC) \
-		   $(VCP_SRC)
 
 # Search path and source files for the ST stdperiph library
 VPATH		:= $(VPATH):$(STDPERIPH_DIR)/src
