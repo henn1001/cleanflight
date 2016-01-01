@@ -169,7 +169,8 @@ void init(void)
 #ifdef STM32F10X
     // Configure the System clock frequency, HCLK, PCLK2 and PCLK1 prescalers
     // Configure the Flash Latency cycles and enable prefetch buffer
-    SetSysClock(masterConfig.emf_avoidance);
+    //SetSysClock(masterConfig.emf_avoidance);
+    SetSysClock(1);    // TODO - hardcoded for now to prevent extra configuring. Needs cleanup
 #endif
     //i2cSetOverclock(masterConfig.i2c_overclock);
 

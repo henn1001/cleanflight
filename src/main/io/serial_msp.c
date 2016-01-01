@@ -768,6 +768,8 @@ static bool processOutCommand(uint8_t cmdMSP)
         }
 #ifdef NAZE
         serialize16(hardwareRevision);
+#elif CC3DF3
+	serialize16(1); // CC3D with F3 chip
 #else
         serialize16(0); // No other build targets currently have hardware revision detection.
 #endif

@@ -76,13 +76,12 @@ mpuDetectionResult_t *detectMpu(const extiConfig_t *configToUse)
 
     mpuIntExtiConfig = configToUse;
 
-    bool ack;
+    bool ack = false;
     uint8_t sig;
     uint8_t inquiryResult;
 
     // MPU datasheet specifies 30ms.
     delay(35);
-
 #ifndef USE_I2C
     ack = false;
 #else
@@ -96,7 +95,6 @@ mpuDetectionResult_t *detectMpu(const extiConfig_t *configToUse)
         bool detectedSpiSensor = detectSPISensorsAndUpdateDetectionResult();
         UNUSED(detectedSpiSensor);
 #endif
-
         return &mpuDetectionResult;
     }
 

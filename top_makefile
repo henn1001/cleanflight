@@ -1,6 +1,7 @@
 ALL_TARGETS := naze
 ALL_TARGETS += cc3d
 ALL_TARGETS += cc3d_opbl
+ALL_TARGETS += cc3df3
 ALL_TARGETS += nazepro
 ALL_TARGETS += olimexino
 ALL_TARGETS += stm32f3discovery
@@ -22,6 +23,7 @@ CLEAN_TARGETS     := $(addprefix clean_, $(ALL_TARGETS))
 clean_naze naze :                         opts := TARGET=NAZE
 clean_cc3d cc3d:                          opts := TARGET=CC3D
 clean_cc3d_opbl cc3d_opbl :               opts := TARGET=CC3D_OPBL
+clean_cc3df3 cc3df3:                      opts := TARGET=CC3DF3
 clean_nazepro nazepro :                   opts := TARGET=NAZE32PRO
 clean_olimexino olimexino :               opts := TARGET=OLIMEXINO
 clean_stm32f3discovery stm32f3discovery : opts := TARGET=STM32F3DISCOVERY
