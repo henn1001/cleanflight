@@ -54,6 +54,8 @@ extern baudRate_e gpsToSerialBaudRate[GPS_BAUDRATE_COUNT];
 extern void gpsSetState(gpsState_e state);
 extern bool gpsHandleNMEA(void);
 extern bool gpsHandleUBLOX(void);
+extern bool gpsHandleI2C(void);
+extern bool gpsDetectI2C(void);
 extern bool gpsHandleI2CNAV(void);
 extern bool gpsDetectI2CNAV(void);
 extern bool gpsHandleNAZA(void);

@@ -93,6 +93,13 @@ static gpsProviderDescriptor_t  gpsProviders[GPS_PROVIDER_COUNT] = {
     { GPS_TYPE_NA, 0, false,  NULL, NULL },
 #endif
 
+    /* UBLOX I2C */
+#ifdef GPS_PROTO_I2C
+    { GPS_TYPE_BUS, 0, false, &gpsDetectI2C, &gpsHandleI2C },
+#else
+    { GPS_TYPE_NA, 0, false,  NULL, NULL },
+#endif
+
     /* MultiWii I2C-NAV module */
 #ifdef GPS_PROTO_I2C_NAV
     { GPS_TYPE_BUS, 0, false, &gpsDetectI2CNAV, &gpsHandleI2CNAV },

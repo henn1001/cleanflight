@@ -30,6 +30,7 @@
 typedef enum {
     GPS_NMEA = 0,
     GPS_UBLOX,
+    GPS_I2C,
     GPS_I2CNAV,
     GPS_NAZA,
     GPS_PROVIDER_COUNT

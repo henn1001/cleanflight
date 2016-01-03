@@ -236,8 +236,9 @@ COMMON_SRC = build_config.c \
 		   drivers/bus_i2c_soft.c \
 		   drivers/serial.c \
 		   drivers/sound_beeper.c \
-		   drivers/system.c \
+                   drivers/system.c \
            drivers/gps_i2cnav.c \
+           drivers/gps_i2c.c \
 		   drivers/gyro_sync.c \
 		   io/beeper.c \
 		   io/rc_controls.c \
@@ -272,12 +273,13 @@ HIGHEND_SRC = \
            flight/navigation_rewrite_fixedwing.c \
            flight/navigation_rewrite_pos_estimator.c \
            flight/navigation_rewrite_geo.c \
-		   flight/gps_conversion.c \
+                   flight/gps_conversion.c \
 		   common/colorconversion.c \
 		   io/gps.c \
 		   io/gps_ublox.c \
            io/gps_nmea.c \
            io/gps_naza.c \
+           io/gps_i2c.c \
            io/gps_i2cnav.c \
 		   io/ledstrip.c \
 		   io/display.c \
