@@ -15,24 +15,27 @@
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-#pragma once
+#include "platform.h"
 
-typedef struct extiConfig_s {
-#if defined(STM32F40_41xxx)
-    uint32_t gpioAHB1Peripherals;
-#endif
-#ifdef STM32F303
-    uint32_t gpioAHBPeripherals;
-#endif
-#ifdef STM32F10X
-    uint32_t gpioAPB2Peripherals;
-#endif
-    uint16_t gpioPin;
-    GPIO_TypeDef *gpioPort;
+#include "gpio.h"
 
-    uint8_t exti_port_source;
-    uint32_t exti_line;
-    uint8_t exti_pin_source;
-    IRQn_Type exti_irqn;
-} extiConfig_t;
+#include "sound_beeper.h"
+
+void initBeeperHardware(beeperConfig_t *config)
+{
+#ifdef BEEPER
+    gpio_config_t gpioConfig = {
+        config->gpioPin,
+        config->gpioMode,
+        Speed_2MHz
+    };
+
+    RCC_AHB1PeriphClockCmd(config->gpioPeripheral, ENABLE);
+
+    gpioInit(config->gpioPort, &gpioConfig);
+#endif
+}

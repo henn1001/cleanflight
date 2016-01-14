@@ -58,6 +58,9 @@ typedef struct drv_pwm_config_s {
 #ifdef STM32F303xC
     bool useUART3;
 #endif
+#if defined(STM32F40_41xxx) || defined (STM32F411xE)
+    bool useUART2;
+#endif
     bool useVbat;
     bool useOneshot;
     bool useFastPWM;

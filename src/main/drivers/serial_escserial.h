@@ -15,24 +15,22 @@
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #pragma once
 
-typedef struct extiConfig_s {
-#if defined(STM32F40_41xxx)
-    uint32_t gpioAHB1Peripherals;
-#endif
-#ifdef STM32F303
-    uint32_t gpioAHBPeripherals;
-#endif
-#ifdef STM32F10X
-    uint32_t gpioAPB2Peripherals;
-#endif
-    uint16_t gpioPin;
-    GPIO_TypeDef *gpioPort;
+#define ESCSERIAL_BUFFER_SIZE 1024
 
-    uint8_t exti_port_source;
-    uint32_t exti_line;
-    uint8_t exti_pin_source;
-    IRQn_Type exti_irqn;
-} extiConfig_t;
+typedef enum {
+    ESCSERIAL1 = 0,
+    ESCSERIAL2
+} escSerialPortIndex_e;
+
+serialPort_t *openEscSerial(escSerialPortIndex_e portIndex, serialReceiveCallbackPtr callback, uint16_t output, uint32_t baud, portOptions_t options, uint8_t mode);
+
+// serialPort API
+void escSerialWriteByte(serialPort_t *instance, uint8_t ch);
+uint8_t escSerialTotalBytesWaiting(serialPort_t *instance);
+uint8_t escSerialReadByte(serialPort_t *instance);
+void escSerialSetBaudRate(serialPort_t *s, uint32_t baudRate);
+bool isEscSerialTransmitBufferEmpty(serialPort_t *s);
+void escSerialInitialize();
+void escEnablePassthrough(serialPort_t *escPassthroughPort, uint16_t output, uint8_t mode);

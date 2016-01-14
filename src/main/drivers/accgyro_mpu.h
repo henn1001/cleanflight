@@ -122,6 +122,8 @@ typedef struct mpuConfiguration_s {
     uint8_t gyroReadXRegister; // Y and Z must registers follow this, 2 words each
     mpuReadRegisterFunc read;
     mpuWriteRegisterFunc write;
+    mpuReadRegisterFunc slowread;
+    mpuWriteRegisterFunc verifywrite;
 } mpuConfiguration_t;
 
 extern mpuConfiguration_t mpuConfiguration;
@@ -152,7 +154,8 @@ typedef enum {
     MPU_60x0,
     MPU_60x0_SPI,
     MPU_65xx_I2C,
-    MPU_65xx_SPI
+    MPU_65xx_SPI,
+    MPU_9250_SPI
 } detectedMPUSensor_e;
 
 typedef enum {

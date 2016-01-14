@@ -94,6 +94,10 @@ void useRcControlsConfig(modeActivationCondition_t *modeActivationConditions, es
     #ifdef STM32F10X_HD
         #define FLASH_PAGE_SIZE                 ((uint16_t)0x800)
     #endif
+
+	#if defined(STM32F40_41xxx)
+    	#define FLASH_PAGE_SIZE                 ((uint32_t)0x20000)
+	#endif
 #endif
 
 #if !defined(FLASH_SIZE) && !defined(FLASH_PAGE_COUNT)
@@ -107,7 +111,11 @@ void useRcControlsConfig(modeActivationCondition_t *modeActivationConditions, es
 #endif
 
 #if defined(FLASH_SIZE)
-#define FLASH_PAGE_COUNT ((FLASH_SIZE * 0x400) / FLASH_PAGE_SIZE)
+#if defined(STM32F40_41xxx)
+    #define FLASH_PAGE_COUNT 4 //FIXME - just to make calculations work
+#else
+	#define FLASH_PAGE_COUNT ((FLASH_SIZE * 0x400) / FLASH_PAGE_SIZE)
+#endif
 #endif
 
 #if !defined(FLASH_PAGE_SIZE)
@@ -124,8 +132,15 @@ void useRcControlsConfig(modeActivationCondition_t *modeActivationConditions, es
 #define FLASH_TO_RESERVE_FOR_CONFIG 0x1000
 #endif
 
+
+#if defined(REVO) || defined(SPARKY2)
+//dedicated flash storage since we have so much storage space
+#define CONFIG_START_FLASH_ADDRESS (0x08080000) //0x08080000 to 0x080A0000 (FLASH_Sector_8)
+#else
 // use the last flash pages for storage
 #define CONFIG_START_FLASH_ADDRESS (0x08000000 + (uint32_t)((FLASH_PAGE_SIZE * FLASH_PAGE_COUNT) - FLASH_TO_RESERVE_FOR_CONFIG))
+#endif
+
 
 master_t masterConfig;                 // master config struct with data independent from profiles
 profile_t *currentProfile;
@@ -605,6 +620,21 @@ static void resetConf(void)
     featureSet(FEATURE_FAILSAFE);
 #endif
 
+#if defined(REVO)
+    featureSet(FEATURE_RX_SERIAL);
+    featureSet(FEATURE_ONESHOT125);
+    masterConfig.serialConfig.portConfigs[1].functionMask = FUNCTION_RX_SERIAL;
+    masterConfig.serialConfig.portConfigs[2].functionMask = FUNCTION_MSP; //default config Fleix port for MSP at 9600 for use with 1wire.
+    masterConfig.serialConfig.portConfigs[2].msp_baudrateIndex = BAUD_9600;
+#endif
+#if defined(SPARKY2)
+    featureSet(FEATURE_RX_SERIAL);
+    featureSet(FEATURE_ONESHOT125);
+    masterConfig.serialConfig.portConfigs[4].functionMask = FUNCTION_RX_SERIAL;
+    masterConfig.serialConfig.portConfigs[3].functionMask = FUNCTION_MSP; //default config Fleix port for MSP at 9600 for use with 1wire.
+    masterConfig.serialConfig.portConfigs[3].msp_baudrateIndex = BAUD_9600;
+#endif
+
     // alternative defaults settings for ALIENWIIF1 and ALIENWIIF3 targets
 #ifdef ALIENWII32
     featureSet(FEATURE_RX_SERIAL);
@@ -969,6 +999,9 @@ void writeEEPROM(void)
     // write it
     FLASH_Unlock();
     while (attemptsRemaining--) {
+#ifdef STM32F40_41xxx
+        FLASH_ClearFlag(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR | FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
+#endif
 #ifdef STM32F303
         FLASH_ClearFlag(FLASH_FLAG_EOP | FLASH_FLAG_PGERR | FLASH_FLAG_WRPERR);
 #endif
@@ -977,7 +1010,11 @@ void writeEEPROM(void)
 #endif
         for (wordOffset = 0; wordOffset < sizeof(master_t); wordOffset += 4) {
             if (wordOffset % FLASH_PAGE_SIZE == 0) {
+#if defined(STM32F40_41xxx)
+            	status = FLASH_EraseSector(FLASH_Sector_8, VoltageRange_3); //0x08080000 to 0x080A0000
+#else
                 status = FLASH_ErasePage(CONFIG_START_FLASH_ADDRESS + wordOffset);
+#endif
                 if (status != FLASH_COMPLETE) {
                     break;
                 }

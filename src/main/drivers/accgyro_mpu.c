@@ -41,6 +41,7 @@
 #include "accgyro_mpu6500.h"
 #include "accgyro_spi_mpu6000.h"
 #include "accgyro_spi_mpu6500.h"
+#include "accgyro_spi_mpu9250.h"
 #include "accgyro_mpu.h"
 
 //#define DEBUG_MPU_DATA_READY_INTERRUPT
@@ -89,8 +90,10 @@ mpuDetectionResult_t *detectMpu(const extiConfig_t *configToUse)
     ack = mpuReadRegisterI2C(MPU_RA_WHO_AM_I, 1, &sig);
 #endif
     if (ack) {
-        mpuConfiguration.read = mpuReadRegisterI2C;
-        mpuConfiguration.write = mpuWriteRegisterI2C;
+    	mpuConfiguration.read = mpuReadRegisterI2C;
+	mpuConfiguration.write = mpuWriteRegisterI2C;
+	mpuConfiguration.slowread = mpuReadRegisterI2C;
+	mpuConfiguration.verifywrite = mpuWriteRegisterI2C;
     } else {
 #ifdef USE_SPI
         bool detectedSpiSensor = detectSPISensorsAndUpdateDetectionResult();
@@ -133,6 +136,8 @@ static bool detectSPISensorsAndUpdateDetectionResult(void)
         mpuDetectionResult.sensor = MPU_65xx_SPI;
         mpuConfiguration.gyroReadXRegister = MPU_RA_GYRO_XOUT_H;
         mpuConfiguration.read = mpu6500ReadRegister;
+        mpuConfiguration.slowread = mpu6500SlowReadRegister;
+        mpuConfiguration.verifywrite = verifympu6500WriteRegister;
         mpuConfiguration.write = mpu6500WriteRegister;
         return true;
     }
@@ -143,9 +148,23 @@ static bool detectSPISensorsAndUpdateDetectionResult(void)
         mpuDetectionResult.sensor = MPU_60x0_SPI;
         mpuConfiguration.gyroReadXRegister = MPU_RA_GYRO_XOUT_H;
         mpuConfiguration.read = mpu6000ReadRegister;
+        mpuConfiguration.slowread = mpu6000SlowReadRegister;
+        mpuConfiguration.verifywrite = verifympu6000WriteRegister;
         mpuConfiguration.write = mpu6000WriteRegister;
         return true;
     }
+#endif
+
+#ifdef USE_GYRO_SPI_MPU9250
+	if (mpu9250SpiDetect()) {
+	    mpuDetectionResult.sensor = MPU_9250_SPI;
+	    mpuConfiguration.gyroReadXRegister = MPU_RA_GYRO_XOUT_H;
+	    mpuConfiguration.read = mpu9250ReadRegister;
+            mpuConfiguration.slowread = mpu9250SlowReadRegister;
+            mpuConfiguration.verifywrite = verifympu9250WriteRegister;
+	    mpuConfiguration.write = mpu9250WriteRegister;
+	    return true;
+	}
 #endif
 
     return false;
@@ -228,11 +247,20 @@ void configureMPUDataReadyInterruptHandling(void)
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 #endif
 
+#if defined(STM32F40_41xxx)
+    /* Enable SYSCFG clock otherwise the EXTI irq handlers are not called */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
+#endif
+
 #ifdef STM32F10X
     gpioExtiLineConfig(mpuIntExtiConfig->exti_port_source, mpuIntExtiConfig->exti_pin_source);
 #endif
 
 #ifdef STM32F303xC
+    gpioExtiLineConfig(mpuIntExtiConfig->exti_port_source, mpuIntExtiConfig->exti_pin_source);
+#endif
+
+#if defined(STM32F40_41xxx)
     gpioExtiLineConfig(mpuIntExtiConfig->exti_port_source, mpuIntExtiConfig->exti_pin_source);
 #endif
 
@@ -274,6 +302,11 @@ void mpuIntExtiInit(void)
         return;
     }
 
+#if defined(STM32F40_41xxx)
+        if (mpuIntExtiConfig->gpioAHB1Peripherals) {
+            RCC_AHB1PeriphClockCmd(mpuIntExtiConfig->gpioAHB1Peripherals, ENABLE);
+        }
+#endif
 #ifdef STM32F303
         if (mpuIntExtiConfig->gpioAHBPeripherals) {
             RCC_AHBPeriphClockCmd(mpuIntExtiConfig->gpioAHBPeripherals, ENABLE);

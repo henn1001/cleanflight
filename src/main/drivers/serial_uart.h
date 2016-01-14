@@ -33,6 +33,12 @@
 typedef struct {
     serialPort_t port;
 
+#if defined(STM32F40_41xxx)
+    DMA_Stream_TypeDef *rxDMAStream;
+    DMA_Stream_TypeDef *txDMAStream;
+    uint32_t rxDMAChannel;
+    uint32_t txDMAChannel;
+#else
     DMA_Channel_TypeDef *rxDMAChannel;
     DMA_Channel_TypeDef *txDMAChannel;
 

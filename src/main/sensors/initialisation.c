@@ -45,6 +45,7 @@
 #include "drivers/bus_spi.h"
 #include "drivers/accgyro_spi_mpu6000.h"
 #include "drivers/accgyro_spi_mpu6500.h"
+#include "drivers/accgyro_spi_mpu9250.h"
 #include "drivers/gyro_sync.h"
 
 #include "drivers/barometer.h"
@@ -55,6 +56,7 @@
 #include "drivers/compass.h"
 #include "drivers/compass_hmc5883l.h"
 #include "drivers/compass_ak8975.h"
+#include "drivers/compass_ak8963.h"
 
 #include "drivers/sonar_hcsr04.h"
 
@@ -168,6 +170,31 @@ const extiConfig_t *selectMPUIntExtiConfig(void)
     return &MotolabF3MPU6050Config;
 #endif
 
+#if defined(REVO)
+    static const extiConfig_t revoMPUIntExtiConfig = {
+            .gpioAHB1Peripherals = RCC_AHB1Periph_GPIOC,
+            .gpioPort = GPIOC,
+            .gpioPin = Pin_4,
+            .exti_port_source = EXTI_PortSourceGPIOC,
+            .exti_pin_source = EXTI_PinSource4,
+            .exti_line = EXTI_Line4,
+            .exti_irqn = EXTI4_IRQn
+    };
+    return &revoMPUIntExtiConfig;
+#endif
+
+#if defined(SPARKY2)
+    static const extiConfig_t sparky2MPUIntExtiConfig = {
+            .gpioAHB1Peripherals = RCC_AHB1Periph_GPIOC,
+            .gpioPort = GPIOC,
+            .gpioPin = Pin_5,
+            .exti_port_source = EXTI_PortSourceGPIOC,
+            .exti_pin_source = EXTI_PinSource5,
+            .exti_line = EXTI_Line5,
+            .exti_irqn = EXTI9_5_IRQn
+    };
+    return &sparky2MPUIntExtiConfig;
+#endif
     return NULL;
 }
 
@@ -293,6 +320,21 @@ bool detectGyro(void)
                 gyroHardware = GYRO_MPU6500;
 #ifdef GYRO_MPU6500_ALIGN
                 gyroAlign = GYRO_MPU6500_ALIGN;
+#endif
+
+                break;
+            }
+#endif
+            ; // fallthrough
+
+        case GYRO_MPU9250:
+#ifdef USE_GYRO_SPI_MPU9250
+
+            if (mpu9250SpiGyroDetect(&gyro))
+            {
+                gyroHardware = GYRO_MPU9250;
+#ifdef GYRO_MPU9250_ALIGN
+                gyroAlign = GYRO_MPU9250_ALIGN;
 #endif
 
                 break;
@@ -428,6 +470,20 @@ retry:
                 break;
             }
 #endif
+
+            ; // fallthrough
+        case ACC_MPU9250:
+#ifdef USE_ACC_MPU9250
+            if (mpu9250SpiAccDetect(&acc))
+            {
+#ifdef ACC_MPU9250_ALIGN
+                accAlign = ACC_MPU9250_ALIGN;
+#endif
+                accHardware = ACC_MPU9250;
+                break;
+            }
+#endif
+
             ; // fallthrough
         case ACC_FAKE:
 #ifdef USE_FAKE_ACC
@@ -616,6 +672,18 @@ retry:
 #endif
             ; // fallthrough
 
+        case MAG_AK8963:
+#ifdef USE_MAG_AK8963
+            if (ak8963Detect(&mag)) {
+#ifdef MAG_AK8963_ALIGN
+                magAlign = MAG_AK8963_ALIGN;
+#endif
+                magHardware = MAG_AK8963;
+                break;
+            }
+#endif
+            ; // fallthrough
+
         case MAG_NONE:
             magHardware = MAG_NONE;
             break;
@@ -655,7 +723,7 @@ bool sensorsAutodetect(sensorAlignmentConfig_t *sensorAlignmentConfig, uint8_t a
     memset(&acc, 0, sizeof(acc));
     memset(&gyro, 0, sizeof(gyro));
 
-#if defined(USE_GYRO_MPU6050) || defined(USE_GYRO_MPU3050) || defined(USE_GYRO_MPU6500) || defined(USE_GYRO_SPI_MPU6500) || defined(USE_GYRO_SPI_MPU6000) || defined(USE_ACC_MPU6050)
+#if defined(USE_GYRO_MPU6050) || defined(USE_GYRO_MPU3050) || defined(USE_GYRO_MPU6500) || defined(USE_GYRO_SPI_MPU6500) || defined(USE_GYRO_SPI_MPU6000) || defined(USE_ACC_MPU6050) || defined(USE_GYRO_SPI_MPU9250)
 
     const extiConfig_t *extiConfig = selectMPUIntExtiConfig();
 
@@ -691,6 +759,10 @@ bool sensorsAutodetect(sensorAlignmentConfig_t *sensorAlignmentConfig, uint8_t a
     } else {
         magneticDeclination = 0.0f; // TODO investigate if this is actually needed if there is no mag sensor or if the value stored in the config should be used.
     }
+
+#if defined(USE_GYRO_SPI_MPU6500) //FIXME
+    spiSetDivisor(MPU6500_SPI_INSTANCE, SPI_ULTRAFAST_CLOCK);
+#endif
 
     return true;
 }

@@ -89,11 +89,17 @@ void EXTI3_IRQHandler(void)
     extiHandler(EXTI3_IRQn);
 }
 #endif
-
-#if defined (COLIBRI_RACE)
+#if defined (COLIBRI_RACE) || defined (SPARKY2)
 void EXTI9_5_IRQHandler(void)
 {
     extiHandler(EXTI9_5_IRQn);
+}
+#endif
+#if defined (REVO)
+void EXTI4_IRQHandler(void) {
+
+    extiHandler(EXTI4_IRQn);
+
 }
 #endif
 
@@ -157,6 +163,12 @@ void systemInit(void)
 
     // cache RCC->CSR value to use it in isMPUSoftreset() and others
     cachedRccCsrValue = RCC->CSR;
+#if defined(STM32F40_41xxx)
+    /* Accounts for OP Bootloader, set the Vector Table base address as specified in .ld file */
+    extern void *isr_vector_table_base;
+    NVIC_SetVectorTable((uint32_t)&isr_vector_table_base, 0x0);
+    RCC_AHB2PeriphClockCmd( RCC_AHB2Periph_OTG_FS, DISABLE);
+#endif
     RCC_ClearFlag();
 
     enableGPIOPowerUsageAndNoiseReductions();
