@@ -206,7 +206,6 @@
 
 
 
-
 // alternative defaults for AlienWii32 F1 target
 #ifdef ALIENWII32
 #undef TARGET_BOARD_IDENTIFIER
@@ -218,3 +217,11 @@
 #define BINDPLUG_PORT  GPIOB
 #define BINDPLUG_PIN   Pin_5
 #endif
+
+#define EXTIgpioPeripherals     RCC_APB2Periph_GPIOC
+#define EXTIgpioPin             Pin_13
+#define EXTIgpioPort            GPIOC
+#define EXTIexti_port_source    GPIO_PortSourceGPIOC
+#define EXTIexti_line           EXTI_Line13
+#define EXTIexti_pin_source     GPIO_PinSource13
+#define EXTIexti_irqn           EXTI15_10_IRQn

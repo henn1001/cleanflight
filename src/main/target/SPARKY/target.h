@@ -174,3 +174,11 @@
 #define BIND_PIN Pin_3 // USART2, PA3
 
 #define USABLE_TIMER_CHANNEL_COUNT 11
+
+#define EXTIgpioPeripherals     RCC_AHBPeriph_GPIOA
+#define EXTIgpioPin             Pin_15
+#define EXTIgpioPort            GPIOA
+#define EXTIexti_port_source    EXTI_PortSourceGPIOA
+#define EXTIexti_line           EXTI_Line15
+#define EXTIexti_pin_source     EXTI_PinSource15
+#define EXTIexti_irqn           EXTI15_10_IRQn

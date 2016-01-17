@@ -199,3 +199,11 @@
 #define BIND_PIN Pin_4 // USART2, PB4
 
 #define USABLE_TIMER_CHANNEL_COUNT 9
+
+#define EXTIgpioPeripherals     RCC_AHBPeriph_GPIOA
+#define EXTIgpioPin             Pin_15
+#define EXTIgpioPort            GPIOA
+#define EXTIexti_port_source    EXTI_PortSourceGPIOA
+#define EXTIexti_line           EXTI_Line15
+#define EXTIexti_pin_source     EXTI_PinSource15
+#define EXTIexti_irqn           EXTI15_10_IRQn

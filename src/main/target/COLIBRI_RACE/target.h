@@ -187,6 +187,12 @@
 
 #define USABLE_TIMER_CHANNEL_COUNT 11
 
-
+#define EXTIgpioPeripherals     RCC_AHBPeriph_GPIOA
+#define EXTIgpioPin             Pin_5
+#define EXTIgpioPort            GPIOA
+#define EXTIexti_port_source    EXTI_PortSourceGPIOA
+#define EXTIexti_line           EXTI_Line5
+#define EXTIexti_pin_source     EXTI_PinSource5
+#define EXTIexti_irqn           EXTI9_5_IRQn
 
 

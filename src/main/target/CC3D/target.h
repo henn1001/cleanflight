@@ -143,3 +143,11 @@
 #define BIND_PIN   Pin_11
 
 #define USABLE_TIMER_CHANNEL_COUNT 12
+
+#define EXTIgpioPeripherals     RCC_APB2Periph_GPIOA
+#define EXTIgpioPin             Pin_3
+#define EXTIgpioPort            GPIOA
+#define EXTIexti_port_source    GPIO_PortSourceGPIOA
+#define EXTIexti_line           EXTI_Line3
+#define EXTIexti_pin_source     GPIO_PinSource3
+#define EXTIexti_irqn           EXTI3_IRQn
